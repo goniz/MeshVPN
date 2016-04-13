@@ -8,7 +8,7 @@ peervpn: peervpn.o
 peervpn.o: peervpn.c
 
 install:
-        mkdir -p $(DESTDIR)/sbin
+	mkdir -p $(DESTDIR)/sbin
 	install peervpn $(DESTDIR)/sbin/peervpn
 clean:
 	rm -f peervpn peervpn.o
