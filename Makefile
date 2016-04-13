@@ -1,5 +1,6 @@
 CFLAGS+=-O2
 LIBS+=-lcrypto -lz
+ROOT="/usr/local"
 
 all: peervpn
 peervpn: peervpn.o
@@ -7,6 +8,7 @@ peervpn: peervpn.o
 peervpn.o: peervpn.c
 
 install:
-	install peervpn /usr/local/sbin/peervpn
+        mkdir -p $(ROOT)/sbin
+	install peervpn $(ROOT)/sbin/peervpn
 clean:
 	rm -f peervpn peervpn.o
