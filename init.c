@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License     *
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
-
+#include "include/logging.h"
 
 // handle termination signals
 void sighandler(int sig) {
@@ -100,8 +100,6 @@ void init(struct s_initconfig *initconfig) {
 		i++;
 	}
 	
-	printf("\n");
-
 	// enable console
 	if(initconfig->enableconsole) {
 		if(!((j = (ioOpenSTDIN(&iostate))) < 0)) {
@@ -117,14 +115,14 @@ void init(struct s_initconfig *initconfig) {
 	}
 	
 	// open udp sockets
-	printf("opening sockets...\n");
+	msg("Openning sockets...");
 	i = 0;
 	ioSetNat64Clat(&iostate, initconfig->enablenat64clat);
 	ioSetSockmark(&iostate, initconfig->sockmark);
 	if(initconfig->enableipv4) {
 		if(!((j = (ioOpenSocketV4(&iostate, initconfig->sourceip, initconfig->sourceport))) < 0)) {
 			ioSetGroup(&iostate, j, IOGRP_SOCKET);
-			printf("   IPv4/UDP: ok.\n");
+                        msg("IPv4/UDP initialization successfull");			
 			i++;
 		}
 		else {
@@ -134,7 +132,7 @@ void init(struct s_initconfig *initconfig) {
 	if(initconfig->enableipv6) {
 		if(!((j = (ioOpenSocketV6(&iostate, initconfig->sourceip, initconfig->sourceport))) < 0)) {
 			ioSetGroup(&iostate, j, IOGRP_SOCKET);
-			printf("   IPv6/UDP: ok.\n");
+			msg("IPv6/UDP initialization successfull");
 			i++;
 		}
 		else {
@@ -147,7 +145,7 @@ void init(struct s_initconfig *initconfig) {
 
 	// open tap device
 	if(initconfig->enableeth) {
-		printf("opening TAP device...\n");
+		msg("Trying to open TAP device");
 		if((j = (ioOpenTAP(&iostate, tapname, initconfig->tapname))) < 0) {
 			g_enableeth = 0;
 			printf("   failed.\n");
@@ -156,8 +154,9 @@ void init(struct s_initconfig *initconfig) {
 		else {
 			ioSetGroup(&iostate, j, IOGRP_TAP);
 			g_enableeth = 1;
-			printf("   device \"%s\": ok.\n", tapname);
-			if(strlen(initconfig->ifconfig4) > 0) {
+                        msgf("Opened TAP device %s", tapname);
+			
+                        if(strlen(initconfig->ifconfig4) > 0) {
 				// configure IPv4 address
 				if(!(ifconfig4(tapname, strlen(tapname), initconfig->ifconfig4, strlen(initconfig->ifconfig4)))) {
 					logWarning("Could not automatically configure IPv4 address!");
@@ -176,7 +175,7 @@ void init(struct s_initconfig *initconfig) {
 				}
 			}
 		}
-		printf("   done.\n");
+                msg("Address configuration completed");
 	}
 	else {
 		g_enableeth = 0;
@@ -214,17 +213,15 @@ void init(struct s_initconfig *initconfig) {
 				l = l+2+m;
 				j = i+1;
 				if(k < 1) {
-					printf("loading OpenSSL engines...\n");
+					msg("Loading OpenSSL engines...\n");
 					ENGINE_load_builtin_engines();
 					ENGINE_register_all_complete();
 					k = 1;
 				}
-				printf("   engine \"%s\": ",str);
 				if(loadengine(str)) {
-					printf("ok\n");
-				}
-				else {
-					printf("failed\n");
+					msgf("Initialized OpenSSL engine %s", str);
+				} else {
+					msgf("Failed to initialize OpenSSL engine %s", str);
 				}
 			}
 			m=0;
@@ -235,11 +232,12 @@ void init(struct s_initconfig *initconfig) {
 
 
 	// initialize p2p core
-	printf("preparing P2P engine...\n");
+	msg("Initializing P2P core");	
 	g_p2psec = p2psecCreate();
 	if(!p2psecLoadDefaults(g_p2psec)) throwError("Failed to load defaults!");
 	if(!p2psecGeneratePrivkey(g_p2psec, 1024)) throwError("Failed to generate private key!");
-	p2psecSetNetname(g_p2psec, initconfig->networkname, strlen(initconfig->networkname));
+	
+        p2psecSetNetname(g_p2psec, initconfig->networkname, strlen(initconfig->networkname));
 	p2psecSetPassword(g_p2psec, initconfig->password, initconfig->password_len);
 	p2psecEnableFragmentation(g_p2psec);
 	if(g_enableeth > 0) {
@@ -255,8 +253,7 @@ void init(struct s_initconfig *initconfig) {
 		p2psecDisableRelay(g_p2psec);
 	}
 	if(!p2psecStart(g_p2psec)) throwError("Failed to start p2p core!");
-	printf("   done.\n");
-	
+        msg("P2P core successfully initialized");	
 	// initialize mac table
 	if(!switchCreate(&g_switchstate)) throwError("Failed to setup mactable!\n");
 	
@@ -272,12 +269,11 @@ void init(struct s_initconfig *initconfig) {
 	signal(SIGTERM, sighandler);
 
 	// show client & network id
-	printf("\n");
 	utilByteArrayToHexstring(str, 256, mapGetKeyByID(&g_p2psec->mgt.map, 0), p2psecGetNodeIDSize());
-	printf("Client ID:  %s\n", str);
+	msgf("Client ID: %s", str);
+	
 	utilByteArrayToHexstring(str, 256, g_p2psec->mgt.netid.id, netid_SIZE);
-	printf("Network ID: %s\n", str);
-	printf("\n");
+	msgf("Network ID: %s", str);	
 
 	// drop privileges
 	dropPrivileges(initconfig->userstr, initconfig->groupstr, initconfig->chrootstr);
@@ -289,16 +285,16 @@ void init(struct s_initconfig *initconfig) {
 	i = 0;
 	if(initconfig->enableseccomp) {		
 		i = seccompEnable();
+                msgf("Seccomp activation status %d", i);
 	}
 	if(initconfig->forceseccomp) {
 		if(!i) throwError("Failed to enable seccomp sandboxing!\nTo ignore this, set the \"forceseccomp\" option to \"no\".");
 	}
 
 	// enter main loop
-	printf("entering main loop...\n");
-	printf("\n");
-	mainLoop();
-	printf("\nmain loop left.\n");
+	msg("Initialization finished, starting main loop");
+        mainLoop();
+        msg("Mainloop finished, closing down");
 
 	// shut down
 	virtservDestroy(&g_virtserv);

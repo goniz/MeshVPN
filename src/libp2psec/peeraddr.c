@@ -70,21 +70,22 @@ static int peeraddrGetInternalType(const struct s_peeraddr *peeraddr) {
 
 // Get indirect PeerAddr attributes. Returns 1 on success or 0 if the PeerAddr is not indirect.
 static int peeraddrGetIndirect(const struct s_peeraddr *peeraddr, int *relayid, int *relayct, int *peerid) {
-	if(peeraddrGetInternalType(peeraddr) == peeraddr_INTERNAL_INDIRECT) {
-		if(relayid != NULL) {
-			*relayid = utilReadInt32(&peeraddr->addr[8]);
-		}
-		if(relayct != NULL) {
-			*relayct = utilReadInt32(&peeraddr->addr[12]);
-		}
-		if(peerid != NULL) {
-			*peerid = utilReadInt32(&peeraddr->addr[16]);
-		}
-		return 1;
-	}
-	else {
+	if(peeraddrGetInternalType(peeraddr) != peeraddr_INTERNAL_INDIRECT) {
 		return 0;
 	}
+	
+	if(relayid != NULL) {
+		*relayid = utilReadInt32(&peeraddr->addr[8]);
+	}
+	
+	if(relayct != NULL) {
+		*relayct = utilReadInt32(&peeraddr->addr[12]);
+	}
+	
+	if(peerid != NULL) {
+		*peerid = utilReadInt32(&peeraddr->addr[16]);
+	}
+	return 1;
 }
 
 

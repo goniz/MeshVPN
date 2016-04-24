@@ -46,29 +46,35 @@ P2PSEC_CTX {
 
 
 int p2psecStart(P2PSEC_CTX *p2psec) {
-	if(cryptoRandInit()) {
-		if((!p2psec->started) && (p2psec->key_loaded) && (p2psec->dh_loaded)) {
-			if(peermgtCreate(&p2psec->mgt, p2psec->peer_count, p2psec->auth_count, &p2psec->nk, &p2psec->dh)) {
-				peermgtSetLoopback(&p2psec->mgt, p2psec->loopback_enable);
-				peermgtSetFastauth(&p2psec->mgt, p2psec->fastauth_enable);
-				peermgtSetFragmentation(&p2psec->mgt, p2psec->fragmentation_enable);
-				peermgtSetNetID(&p2psec->mgt, p2psec->netname, p2psec->netname_len);
-				peermgtSetPassword(&p2psec->mgt, p2psec->password, p2psec->password_len);
-				peermgtSetFlags(&p2psec->mgt, p2psec->flags);
-				p2psec->started = 1;
-				return 1;
-			}
-		}
+	if(!cryptoRandInit()) {
+		return 0;
 	}
-	return 0;
+
+	if (!((!p2psec->started) && (p2psec->key_loaded) && (p2psec->dh_loaded))) {
+		return 0;
+	}
+	
+	if(!(peermgtCreate(&p2psec->mgt, p2psec->peer_count, p2psec->auth_count, &p2psec->nk, &p2psec->dh))) {
+		return 0;
+	}
+				
+	peermgtSetLoopback(&p2psec->mgt, p2psec->loopback_enable);
+	peermgtSetFastauth(&p2psec->mgt, p2psec->fastauth_enable);
+	peermgtSetFragmentation(&p2psec->mgt, p2psec->fragmentation_enable);
+	peermgtSetNetID(&p2psec->mgt, p2psec->netname, p2psec->netname_len);
+	peermgtSetPassword(&p2psec->mgt, p2psec->password, p2psec->password_len);
+	peermgtSetFlags(&p2psec->mgt, p2psec->flags);
+	p2psec->started = 1;
+	
+	return 1;
 }
 
 
 void p2psecStop(P2PSEC_CTX *p2psec) {
-	if(p2psec->started) {
-		peermgtDestroy(&p2psec->mgt);
-		p2psec->started = 0;
-	}
+	if(!p2psec->started) return;
+
+	peermgtDestroy(&p2psec->mgt);
+	p2psec->started = 0;
 }
 
 
@@ -84,6 +90,7 @@ int p2psecGetNodeIDSize() {
 
 int p2psecLoadPrivkey(P2PSEC_CTX *p2psec, unsigned char *pemdata, const int pemdata_len) {
 	if(p2psec->key_loaded) nodekeyDestroy(&p2psec->nk);
+	
 	if(nodekeyCreate(&p2psec->nk)) {
 		if(nodekeyLoadPrivatePEM(&p2psec->nk, pemdata, pemdata_len)) {
 			p2psec->key_loaded = 1;

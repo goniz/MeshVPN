@@ -43,7 +43,8 @@ struct s_initconfig {
 	int enableprivdrop;
 	int enableseccomp;
 	int forceseccomp;
-	int enableconsole;
+	int daemonize;
+        int enableconsole;
 	int sockmark;
 };
 
@@ -106,33 +107,28 @@ static int parseConfigIsEOLChar(char c) {
 
 static int parseConfigLineCheckCommand(char *line, int linelen, const char *cmd, int *vpos) {
 	int cmdlen = strlen(cmd);
-	if(linelen >= cmdlen) {
-		if(strncmp(line,cmd,cmdlen) == 0) {
-			if(parseConfigIsEOLChar(line[cmdlen])) {
-				*vpos = cmdlen;
-				return 1;
-			}
-			else if(isWhitespaceChar(line[cmdlen])) {
-				*vpos = cmdlen;
-				while(((*vpos)+1) < linelen) {
-					if(isWhitespaceChar(line[*vpos])) {
-						*vpos = (*vpos)+1;
-					}
-					else {
-						break;
-					}
-				}
-				return 1;
-			}
-			else {
-				return 0;
-			}
-		}
-		else {
-			return 0;
-		}
+	if(!(linelen >= cmdlen)) {
+		return 0;
 	}
-	else {
+	
+	if(strncmp(line,cmd,cmdlen) != 0) {
+		return 0;
+	}
+
+	if(parseConfigIsEOLChar(line[cmdlen])) {
+		*vpos = cmdlen;
+		return 1;
+	} else if(isWhitespaceChar(line[cmdlen])) {
+		*vpos = cmdlen;
+		while(((*vpos)+1) < linelen) {
+			if(!isWhitespaceChar(line[*vpos])) {
+				break;
+			}
+			
+			*vpos = (*vpos)+1;
+		}
+		return 1;
+	} else {
 		return 0;
 	}
 }
@@ -295,6 +291,14 @@ static int parseConfigLine(char *line, int len, struct s_initconfig *cs) {
 		}
 		else {
 			cs->enablenat64clat = a;
+			return 1;
+		}
+	}
+	else if(parseConfigLineCheckCommand(line, len, "daemonize", &vpos)) {
+		if((a = parseConfigBoolean(&line[vpos])) < 0) {
+			return -1;
+		} else {
+			cs->daemonize = a;
 			return 1;
 		}
 	}

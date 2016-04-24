@@ -378,12 +378,7 @@ static void peermgtSetFastauth(struct s_peermgt *mgt, const int enable) {
 
 // Enable/disable packet fragmentation.
 static void peermgtSetFragmentation(struct s_peermgt *mgt, const int enable) {
-	if(enable) {
-		mgt->fragmentation = 1;
-	}
-	else {
-		mgt->fragmentation = 0;
-	}
+	mgt->fragmentation = (enable) ? 1 : 0;
 }
 
 
@@ -458,18 +453,19 @@ static int peermgtSendPingToAddr(struct s_peermgt *mgt, const struct s_nodeid *t
 
 	outpeerid = peermgtGetActiveID(mgt, tonodeid, topeerid, topeerct);
 
-	if(outpeerid > 0) {
-		cryptoRand(pingbuf, 64); // generate ping message
-		memcpy(mgt->rrmsg.msg, pingbuf, peermgt_PINGBUF_SIZE);
-		mgt->rrmsgpeerid = outpeerid;
-		mgt->rrmsgtype = packet_PLTYPE_PING;
-		mgt->rrmsg.len = peermgt_PINGBUF_SIZE;
-		mgt->rrmsgusetargetaddr = 1;
-		mgt->rrmsgtargetaddr = *peeraddr;
-		return 1;
+	if(!(outpeerid > 0)) {
+		return 0;
 	}
-
-	return 0;
+	
+	cryptoRand(pingbuf, 64); // generate ping message
+	memcpy(mgt->rrmsg.msg, pingbuf, peermgt_PINGBUF_SIZE);
+	mgt->rrmsgpeerid = outpeerid;
+	mgt->rrmsgtype = packet_PLTYPE_PING;
+	mgt->rrmsg.len = peermgt_PINGBUF_SIZE;
+	mgt->rrmsgusetargetaddr = 1;
+	mgt->rrmsgtargetaddr = *peeraddr;
+	
+	return 1;
 }
 
 

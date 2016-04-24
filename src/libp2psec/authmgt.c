@@ -24,7 +24,7 @@
 #include "auth.c"
 #include "peeraddr.c"
 #include "idsp.c"
-
+#include "../include/logging.h"
 
 // Timeouts.
 #define authmgt_RECV_TIMEOUT 30
@@ -60,20 +60,15 @@ static int authmgtUsedSlotCount(struct s_authmgt *mgt) {
 static int authmgtNew(struct s_authmgt *mgt, const struct s_peeraddr *peeraddr) {
 	int authstateid = idspNew(&mgt->idsp);
 	int tnow = utilGetClock();
-	if(!(authstateid < 0)) {
-		if(mgt->fastauth) {
-			mgt->lastsend[authstateid] = (tnow - authmgt_RESEND_TIMEOUT - 3);
-		}
-		else {
-			mgt->lastsend[authstateid] = tnow;
-		}
-		mgt->lastrecv[authstateid] = tnow;
-		mgt->peeraddr[authstateid] = *peeraddr;
-		return authstateid;
-	}
-	else {
+	
+	if(authstateid < 0) {
 		return -1;
 	}
+
+	mgt->lastsend[authstateid] = (mgt->fastauth) ? (tnow - authmgt_RESEND_TIMEOUT - 3) : tnow;
+	mgt->lastrecv[authstateid] = tnow;
+	mgt->peeraddr[authstateid] = *peeraddr;
+	return authstateid;
 }
 
 
@@ -89,24 +84,18 @@ static void authmgtDelete(struct s_authmgt *mgt, const int authstateid) {
 // Start new auth session. Returns 1 on success.
 static int authmgtStart(struct s_authmgt *mgt, const struct s_peeraddr *peeraddr) {
 	int authstateid = authmgtNew(mgt, peeraddr);
-	if(!(authstateid < 0)) {
-		authStart(&mgt->authstate[authstateid]);
-		return 1;
-	}
-	else {
+	if(authstateid < 0) {
 		return 0;
 	}
+	
+	authStart(&mgt->authstate[authstateid]);
+	return 1;
 }
 
 
 // Check if auth manager has an authed peer.
 static int authmgtHasAuthedPeer(struct s_authmgt *mgt) {
-	if(!(mgt->current_authed_id < 0)) {
-		return 1;
-	}
-	else {
-		return 0;
-	}
+	return (!(mgt->current_authed_id < 0));
 }
 
 
@@ -138,12 +127,7 @@ static void authmgtRejectAuthedPeer(struct s_authmgt *mgt) {
 
 // Check if auth manager has a completed peer.
 static int authmgtHasCompletedPeer(struct s_authmgt *mgt) {
-	if(!(mgt->current_completed_id < 0)) {
-		return 1;
-	}
-	else {
-		return 0;
-	}
+	return (!(mgt->current_completed_id < 0));
 }
 
 
@@ -171,14 +155,14 @@ static int authmgtGetCompletedPeerNodeID(struct s_authmgt *mgt, struct s_nodeid 
 
 // Get the remote PeerID and PeerAddr of the current completed peer.
 static int authmgtGetCompletedPeerAddress(struct s_authmgt *mgt, int *remote_peerid, struct s_peeraddr *remote_peeraddr) {
-	if(authmgtHasCompletedPeer(mgt)) {
-		if(!authGetRemotePeerID(&mgt->authstate[mgt->current_completed_id], remote_peerid)) return 0;
-		*remote_peeraddr = mgt->peeraddr[mgt->current_completed_id];
-		return 1;
-	}
-	else {
+	if(!authmgtHasCompletedPeer(mgt)) {
 		return 0;
 	}
+
+	if(!authGetRemotePeerID(&mgt->authstate[mgt->current_completed_id], remote_peerid)) return 0;
+	*remote_peeraddr = mgt->peeraddr[mgt->current_completed_id];
+	
+	return 1;
 }
 
 
