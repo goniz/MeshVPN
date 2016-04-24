@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License     *
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
-
+#include "include/logging.h"
 
 // generates warning message
 static void logWarning(char *msg) {
@@ -30,36 +30,34 @@ static void connectInitpeers() {
 	char *port = NULL;
 	struct s_io_addrinfo new_peeraddrs;
 	i=0;j=0;k=0;l=0;
+	
 	for(;;) {
 		j = g_initpeers[i];
-		if((j > 0) && (i+j+1 < INITPEER_STORAGE)) {
-			if(k) {
-				port = &g_initpeers[i+1];
-				printf("[%d] resolving %s:%s...\n",p2psecUptime(g_p2psec),hostname,port);
-				if(ioResolveName(&new_peeraddrs, hostname, port)) {
-					for(l=0; l<new_peeraddrs.count; l++) {
-						if(p2psecConnect(g_p2psec,new_peeraddrs.item[l].addr)) {
-							printf("             done.\n");
-						}
-						else {
-							printf("             failed: connection could not be created.\n");
-						}
-					}
-				}
-				else {
-					printf("             failed: name could not be resolved.\n");
-				}
-				k=0;
-			}
-			else {
-				hostname = &g_initpeers[i+1];
-				k=1;
-			}
-			i=i+j+1;
-		}
-		else {
+		if(!((j > 0) && (i+j+1 < INITPEER_STORAGE))) {
 			break;
 		}
+
+		if(k) {
+			port = &g_initpeers[i+1];
+			msgf("Connecting to initial peer %s:%s", hostname, port);
+			
+			if(ioResolveName(&new_peeraddrs, hostname, port)) {
+				for(l=0; l<new_peeraddrs.count; l++) {
+					if(p2psecConnect(g_p2psec,new_peeraddrs.item[l].addr)) {
+						msgf("Established connection with %s:%s", hostname, port);
+					} else {
+						msgf("Failed to establish connection with %s:%s", hostname, port);
+					}
+				}
+			} else {
+				printf("             failed: name could not be resolved.\n");
+			}
+			k=0;
+		} else {
+			hostname = &g_initpeers[i+1];
+			k=1;
+		}
+		i=i+j+1;
 	}
 }
 
@@ -225,19 +223,12 @@ static void mainLoop() {
 			laststatus = tnow;
 			connectcount = p2psecPeerCount(g_p2psec);
 			if(lastconnectcount != connectcount) {
-				printf("[%d] %d peers connected.\n", p2psecUptime(g_p2psec), connectcount);
+				msgf("[%d] %d peers connected.\n", p2psecUptime(g_p2psec), connectcount);
 				lastconnectcount = connectcount;
 			}
 		}
-		/*
-		if((tnow - laststatus) > 0) {
-			laststatus = tnow;
-			connectcount = p2psecPeerCount(g_p2psec);
-			printf("\ruptime: %d, peers connected: %d", p2psecUptime(g_p2psec), connectcount);
-		}
-		*/
-
-		// connect initpeers
+		
+                // connect initpeers
 		if(((tnow - lastinit) > 30) && (!(mapGetKeyCount(&g_p2psec->mgt.map) > 1))) {
 			lastinit = tnow;
 			connectInitpeers();
