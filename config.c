@@ -42,6 +42,7 @@ struct s_initconfig {
 	int enablenat64clat;
 	int enableprivdrop;
 	int enableseccomp;
+	int enablesyslog;
 	int forceseccomp;
 	int daemonize;
         int enableconsole;
@@ -299,6 +300,14 @@ static int parseConfigLine(char *line, int len, struct s_initconfig *cs) {
 			return -1;
 		} else {
 			cs->daemonize = a;
+			return 1;
+		}
+	}
+	else if(parseConfigLineCheckCommand(line,len,"enablesyslog",&vpos)) {
+		if((a = parseConfigBoolean(&line[vpos])) < 0) {
+			return -1;
+		} else {
+			cs->enablesyslog = a;
 			return 1;
 		}
 	}

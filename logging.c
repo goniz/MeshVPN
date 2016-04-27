@@ -26,7 +26,7 @@ int logger_set_mode(int mode) {
 
 void msg(char * msg) {
 	if(logging_mode == LOGGING_NONE) {
-		printf(msg);
+		printf("%s\n", msg);
 	} else if(logging_mode == LOGGING_SYSLOG) {
 		syslog(LOG_INFO, msg);
 	}
