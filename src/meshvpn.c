@@ -74,10 +74,10 @@ int main(int argc, char **argv) {
 	config.enableipv4 = 1;
 	config.enableipv6 = 1;
 	config.enablenat64clat = 0;
+	config.enablesyslog = 0;	
 	config.sockmark = 0;
 
 	setbuf(stdout,NULL);
-        logger_set_mode(LOGGING_SYSLOG);
 
 	confok = 0;
 	if(argc != 2) {
@@ -109,7 +109,9 @@ int main(int argc, char **argv) {
 	if(!confok) {
 		return show_usage();
 	}
-
+	if(config.enablesyslog)	{
+		logger_set_mode(LOGGING_SYSLOG);	
+	}
 	if(config.daemonize) {
 		msg("Detaching process");
 		pid_t pid;
