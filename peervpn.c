@@ -60,7 +60,9 @@ int main(int argc, char **argv) {
 	strcpy(config.networkname,"PEERVPN");
 	strcpy(config.initpeers,"");
 	strcpy(config.engines,"");
+        strcpy(config.pidfile, "");
 	config.password_len = 0;
+	config.enablepidfile = 0;
 	config.enableeth = 1;
 	config.enablendpcache = 0;
 	config.enablevirtserv = 0;
@@ -76,7 +78,7 @@ int main(int argc, char **argv) {
 	config.enablenat64clat = 0;
 	config.enablesyslog = 0;	
 	config.sockmark = 0;
-
+	config.enablepidfile = 0;
 	setbuf(stdout,NULL);
 
 	confok = 0;
@@ -121,7 +123,17 @@ int main(int argc, char **argv) {
 			default: return 0;
 		}
 	}
-
+	if(config.enablepidfile) {
+		pid_t pid = getpid();
+		msgf("PID %d, file will be saved to %s", pid, config.pidfile);
+		FILE *fp;
+		fp = fopen(config.pidfile, "w");
+		if(fp == NULL) {
+			throwError("Failed to write pidfile");
+		}
+		fprintf(fp, "%d", pid);
+		fclose(fp);
+	}
 	// start vpn node
 	init(&config);
 	return 0;
