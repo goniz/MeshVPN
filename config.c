@@ -31,7 +31,9 @@ struct s_initconfig {
 	char initpeers[CONFPARSER_NAMEBUF_SIZE+1];
 	char engines[CONFPARSER_NAMEBUF_SIZE+1];
 	char password[CONFPARSER_NAMEBUF_SIZE+1];
+	char pidfile[CONFPARSER_NAMEBUF_SIZE+1];
 	int password_len;
+	int enablepidfile;
 	int enableindirect;
 	int enablerelay;
 	int enableeth;
@@ -157,6 +159,11 @@ static int parseConfigLine(char *line, int len, struct s_initconfig *cs) {
 	}
 	else if(parseConfigLineCheckCommand(line,len,"group",&vpos)) {
 		strncpy(cs->groupstr,&line[vpos],CONFPARSER_NAMEBUF_SIZE);
+		return 1;
+	}
+	else if(parseConfigLineCheckCommand(line, len, "pidfile", &vpos)) {
+		strncpy(cs->pidfile, &line[vpos],CONFPARSER_NAMEBUF_SIZE);
+		cs->enablepidfile = 1;
 		return 1;
 	}
 	else if(parseConfigLineCheckCommand(line,len,"chroot",&vpos)) {

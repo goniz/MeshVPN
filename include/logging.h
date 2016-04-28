@@ -17,4 +17,10 @@ void msg(char *);
 
 void msgf(char *,...);
 
-#endif
+#ifdef DEBUG
+	#define debug(...) msgf(__VA_ARGS__)
+#else
+	#define debug(...) 
+#endif /** DEBUG BLOCK */
+
+#endif /** HEADER GUARD */
