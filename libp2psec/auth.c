@@ -43,6 +43,10 @@
 #define auth_S4b 10
 #define auth_S5a 11
 
+#define AUTH_STATE_IDLE 0
+#define AUTH_STATE_STARTED 1
+#define AUTH_STATE_FINISHED 11
+
 
 // Size of HMAC tag.
 #define auth_HMACSIZE 32
@@ -196,23 +200,29 @@ static int authDecodeS0(struct s_auth_state *authstate, const unsigned char *msg
     int msgnum;
     unsigned char checksum[8];
     if(msg_len < (4 + 2 + 8 + 4 + 4 + netid_SIZE)) {
+        debugf("wrong S0 message size: %d", msg_len);
         return 0;
     }
     
     msgnum = utilReadInt16(&msg[4]);
-    if(msgnum != (authstate->state + 1)) {
+    int expected_state = authstate->state + 1;
+    if(msgnum != expected_state) {
+        debugf("wrong S0 msgnum: %d, waiting for %d", msgnum, expected_state);
         return 0;
     }
     
     if(!cryptoCalculateSHA256(checksum, 8, &msg[(4 + 2 + 8)], (4 + 4 + netid_SIZE))) {
+        debug("unable to create SHA256 sum for S0 message");
         return 0;
     }
     
     if(memcmp(checksum, &msg[(4 + 2)], 8) != 0) {
+        debug("checksum verification failed for S0");
         return 0;
     }
     
     if(memcmp(authstate->netid->id, &msg[(4 + 2 + 8 + 4 + 4)], netid_SIZE) != 0) {
+        debug("NetID verification failed for S0 message");
         return 0;
     }
     
@@ -253,30 +263,38 @@ static int authDecodeS1(struct s_auth_state *authstate, const unsigned char *msg
 	int dhsize;
 	unsigned char shared_nonce[auth_NONCESIZE + auth_NONCESIZE];
 	unsigned char checksum[8];
-	
-    if(msg_len <= (4 + 2 + 8 + 4 + auth_NONCESIZE + 2)) {
+    int min_msg_len = (4 + 2 + 8 + 4 + auth_NONCESIZE + 2);
+    
+    if(msg_len <= min_msg_len) {
+        debugf("wrong msg_len %d, minimum %d", msg_len, min_msg_len);
         return 0;
     }
     
     msgnum = utilReadInt16(&msg[4]);
-    if(msgnum != (authstate->state + 1)) {
+    int expected_state = authstate->state + 1;
+    if(msgnum != expected_state) {
+        debugf("wrong msg_num, current %d, expected %d", msgnum, expected_state);
         return 0;
     }
     
     if(memcmp(authstate->local_sesstoken, &msg[(4 + 2 + 8)], 4) != 0) {
+        debug("different local and remote session tokens");
         return 0;
     }
     
     dhsize = utilReadInt16(&msg[(4 + 2 + 8 + 4 + auth_NONCESIZE)]);
     if(!((dhsize > dh_MINSIZE) && (dhsize <= dh_MAXSIZE) && (msg_len >= (4 + 2 + 8 + 4 + auth_NONCESIZE + 2 + dhsize)))) {
+        debug("DH size error");
         return 0;
     }
     
     if(!cryptoCalculateSHA256(checksum, 8, &msg[(4 + 2 + 8)], (4 + auth_NONCESIZE + 2 + dhsize))) {
+        debug("failed to calculate SHA256");
         return 0;
     }
     
     if(memcmp(checksum, &msg[(4 + 2)], 8) != 0) {
+        debug("checksum verification failed");
         return 0;
     }
     
@@ -285,6 +303,7 @@ static int authDecodeS1(struct s_auth_state *authstate, const unsigned char *msg
     memcpy(authstate->remote_nonce, &msg[(4 + 2 + 8 + 4)], auth_NONCESIZE);
     
     if(memcmp(authstate->local_nonce, authstate->remote_nonce, auth_NONCESIZE) == 0) {
+        debug("different local and remote nonce");
         return 0;
     }
     
@@ -364,33 +383,40 @@ static int authDecodeS2(struct s_auth_state *authstate, const unsigned char *msg
 	unsigned char siginbuf[auth_SIGINBUFSIZE];
 	unsigned char decmsg[auth_MAXMSGSIZE_S2];
 	int siginbuf_size;
-	if(msg_len > 10) {
-		memcpy(decmsg, msg, 6);
-		msgnum = utilReadInt16(&decmsg[4]);
-		if(msgnum == (authstate->state + 1)) {
-			decmsg_len = (4 + 2 + cryptoDec(&authstate->crypto_ctx[auth_CRYPTOCTX_IDP], &decmsg[(4 + 2)], (auth_MAXMSGSIZE_S2 - 2 - 4), &msg[(4 + 2)], (msg_len - 2 - 4), auth_IDPHMACSIZE, auth_IDPIVSIZE)); // decrypt IDP layer
-			if(decmsg_len > 10) {
-				nksize = utilReadInt16(&decmsg[(4 + 2)]);
-				if((nksize > nodekey_MINSIZE) && (nksize <= nodekey_MAXSIZE) && (decmsg_len > (10 + nksize))) {
-					signsize = utilReadInt16(&decmsg[(4 + 4 + nksize)]);
-					if((signsize > 0) && (decmsg_len >= (10 + nksize + signsize + auth_HMACSIZE))) { // check message length
-						if(cryptoHMAC(&authstate->crypto_ctx[auth_CRYPTOCTX_AUTH], hmac, auth_HMACSIZE, &decmsg[(4 + 4)], nksize)) { // generate HMAC tag
-							if(memcmp(&decmsg[(10 + nksize + signsize)], hmac, auth_HMACSIZE) == 0) { // verify HMAC tag
-								if(nodekeyLoadDER(&authstate->remote_nodekey, &decmsg[(4 + 4)], nksize)) { // load remote public key
-									if(memcmp(authstate->remote_nodekey.nodeid.id, authstate->local_nodekey->nodeid.id, nodeid_SIZE) != 0) { // check if remote public key is different from local public key
-										siginbuf_size = authGenRemoteSigIn(authstate, siginbuf, &decmsg[4]);
-										if(rsaVerify(&authstate->remote_nodekey.key, &decmsg[(10 + nksize)], signsize, siginbuf, siginbuf_size)) { // verify signature
-											return 1;
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+	if(msg_len <= 10) {
+        debugf("small msg_len for S2 message %d", msg_len);
+        return 0;
+    }
+    
+    memcpy(decmsg, msg, 6);
+    msgnum = utilReadInt16(&decmsg[4]);
+    if(msgnum != (authstate->state + 1)) {
+        debugf("wrong msgnum received %d, current state: %d", msgnum, authstate->state);
+        return 0;
+    }
+    
+    decmsg_len = (4 + 2 + cryptoDec(&authstate->crypto_ctx[auth_CRYPTOCTX_IDP], &decmsg[(4 + 2)], (auth_MAXMSGSIZE_S2 - 2 - 4), &msg[(4 + 2)], (msg_len - 2 - 4), auth_IDPHMACSIZE, auth_IDPIVSIZE)); // decrypt IDP layer
+    if(decmsg_len > 10) {
+        nksize = utilReadInt16(&decmsg[(4 + 2)]);
+        if((nksize > nodekey_MINSIZE) && (nksize <= nodekey_MAXSIZE) && (decmsg_len > (10 + nksize))) {
+            signsize = utilReadInt16(&decmsg[(4 + 4 + nksize)]);
+            if((signsize > 0) && (decmsg_len >= (10 + nksize + signsize + auth_HMACSIZE))) { // check message length
+                if(cryptoHMAC(&authstate->crypto_ctx[auth_CRYPTOCTX_AUTH], hmac, auth_HMACSIZE, &decmsg[(4 + 4)], nksize)) { // generate HMAC tag
+                    if(memcmp(&decmsg[(10 + nksize + signsize)], hmac, auth_HMACSIZE) == 0) { // verify HMAC tag
+                        if(nodekeyLoadDER(&authstate->remote_nodekey, &decmsg[(4 + 4)], nksize)) { // load remote public key
+                            if(memcmp(authstate->remote_nodekey.nodeid.id, authstate->local_nodekey->nodeid.id, nodeid_SIZE) != 0) { // check if remote public key is different from local public key
+                                siginbuf_size = authGenRemoteSigIn(authstate, siginbuf, &decmsg[4]);
+                                if(rsaVerify(&authstate->remote_nodekey.key, &decmsg[(10 + nksize)], signsize, siginbuf, siginbuf_size)) { // verify signature
+                                    return 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
 	return 0;
 }
 
@@ -474,17 +500,24 @@ static void authGenS4(struct s_auth_state *authstate) {
 // Decode auth message S4
 static int authDecodeS4(struct s_auth_state *authstate, const unsigned char *msg, const int msg_len) {
 	int msgnum;
+    int min_msg_len = 6 + auth_NONCESIZE + auth_CNEGHMACSIZE;
+    
 	unsigned char hmac[auth_HMACSIZE];
-	if(msg_len >= (6 + auth_NONCESIZE + auth_CNEGHMACSIZE)) {
-		msgnum = utilReadInt16(&msg[4]);
-		if(msgnum == (authstate->state + 1)) {
-			if(cryptoHMAC(&authstate->crypto_ctx[auth_CRYPTOCTX_CNEG], hmac, auth_HMACSIZE, &msg[6], auth_NONCESIZE)) {
-				if(memcmp(hmac, &msg[(6 + auth_NONCESIZE)], auth_CNEGHMACSIZE) == 0) {
-					return 1;
-				}
-			}
-		}
-	}
+    
+	if(msg_len < min_msg_len) {
+        debugf("S4 wrong msg_len, %d != %d", msg_len, min_msg_len);
+        return 0;
+    }
+    
+    msgnum = utilReadInt16(&msg[4]);
+    if(msgnum == (authstate->state + 1)) {
+        if(cryptoHMAC(&authstate->crypto_ctx[auth_CRYPTOCTX_CNEG], hmac, auth_HMACSIZE, &msg[6], auth_NONCESIZE)) {
+            if(memcmp(hmac, &msg[(6 + auth_NONCESIZE)], auth_CNEGHMACSIZE) == 0) {
+                return 1;
+            }
+        }
+    }
+
 	return 0;
 }
 
@@ -492,6 +525,8 @@ static int authDecodeS4(struct s_auth_state *authstate, const unsigned char *msg
 // Generate auth message
 static void authGenMsg(struct s_auth_state *authstate) {
 	int state = authstate->state;
+
+    debugf("Generating state MSG, current state: %d", state);
 	switch(state) {
 		case auth_S0a:
 		case auth_S0b:
@@ -524,7 +559,9 @@ static void authGenMsg(struct s_auth_state *authstate) {
 static int authDecodeMsg(struct s_auth_state *authstate, const unsigned char *msg, const int msg_len) {
 	int state = authstate->state;
 	int newstate = state;
-	
+
+    debugf("AUTH state request %d", state);
+
 	switch(state) {
 		case auth_IDLE: if(authDecodeS0(authstate, msg, msg_len)) newstate = auth_S0b; break;
 		case auth_S0a:  if(authDecodeS0(authstate, msg, msg_len)) newstate = auth_S1a; break;
@@ -537,13 +574,23 @@ static int authDecodeMsg(struct s_auth_state *authstate, const unsigned char *ms
 		case auth_S3b:  if(authDecodeS4(authstate, msg, msg_len)) newstate = auth_S4b; break;
 		case auth_S4a:  if(authDecodeS4(authstate, msg, msg_len)) newstate = auth_S5a; break;
 	}
+    
+    if(state == AUTH_STATE_FINISHED) {
+        debug("Auth confirmation received");
+        authGenMsg(authstate);
+        return 1;
+    }
 	
 	if(state == newstate) {
+        debugf("Failed to change state %d => %d", state, state + 1);
         return 0;
     }
     
+    debugf("AUTH state changed %d => %d", state, newstate);
+    
     authstate->state = newstate;
     authGenMsg(authstate);
+    
     return 1;
 }
 

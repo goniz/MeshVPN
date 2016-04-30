@@ -765,52 +765,56 @@ static int peermgtDecodePacketAuth(struct s_peermgt *mgt, const struct s_packet_
 	struct s_nodeid peer_nodeid;
 	int peerid;
 	int dupid;
+    char humanIp[60];
+    peeraddrToHuman(humanIp, source_addr);
+    
 	int64_t remoteflags = 0;
 
-	if(authmgtDecodeMsg(authmgt, data->pl_buf, data->pl_length, source_addr)) {
-		if(authmgtGetAuthedPeerNodeID(authmgt, &peer_nodeid)) {
-			dupid = peermgtGetID(mgt, &peer_nodeid);
-			if(dupid < 0) {
-				// Create new PeerID.
-				peerid = peermgtNew(mgt, &peer_nodeid, source_addr);
-			}
-			else {
-				// Don't replace active existing session.
-				peerid = -1;
-
-				// Upgrade indirect connection to a direct one
-				if((peeraddrIsInternal(&mgt->data[dupid].remoteaddr)) && (!peeraddrIsInternal(source_addr))) {
-					mgt->data[dupid].remoteaddr = *source_addr;
-					peermgtSendPingToAddr(mgt, NULL, dupid, mgt->data[dupid].conntime, source_addr); // send a ping using the new peer address
-				}
-			}
-			if(peerid > 0) {
-				// NodeID gets accepted here.
-				authmgtAcceptAuthedPeer(authmgt, peerid, seqGet(&mgt->data[peerid].seq), mgt->localflags);
-			}
-			else {
-				// Reject authentication attempt because local PeerID could not be generated.
-				authmgtRejectAuthedPeer(authmgt);
-			}
-		}
-		if(authmgtGetCompletedPeerNodeID(authmgt, &peer_nodeid)) {
-			peerid = peermgtGetID(mgt, &peer_nodeid);
-			if((peerid > 0) && (mgt->data[peerid].state >= peermgt_STATE_AUTHED) && (authmgtGetCompletedPeerLocalID(authmgt)) == peerid) {
-				// Node data gets completed here.
-				authmgtGetCompletedPeerAddress(authmgt, &mgt->data[peerid].remoteid, &mgt->data[peerid].remoteaddr);
-				authmgtGetCompletedPeerSessionKeys(authmgt, &mgt->ctx[peerid]);
-				authmgtGetCompletedPeerConnectionParams(authmgt, &mgt->data[peerid].remoteseq, &remoteflags);
-				mgt->data[peerid].remoteflags = remoteflags;
-				mgt->data[peerid].state = peermgt_STATE_COMPLETE;
-				mgt->data[peerid].lastrecv = tnow;
-			}
-			authmgtFinishCompletedPeer(authmgt);
-		}
-		return 1;
-	}
-	else {
-		return 0;
-	}
+    debugf("[%s] PeerID: %d AUTH message", humanIp, peerid);
+	if(!authmgtDecodeMsg(authmgt, data->pl_buf, data->pl_length, source_addr)) {
+        debugf("[%s] Wrong AUTH message", humanIp);
+        return 0;
+    }
+    
+    if(authmgtGetAuthedPeerNodeID(authmgt, &peer_nodeid)) {
+        dupid = peermgtGetID(mgt, &peer_nodeid);
+        if(dupid < 0) {
+            // Create new PeerID.
+            peerid = peermgtNew(mgt, &peer_nodeid, source_addr);
+        }
+        else {
+            // Don't replace active existing session.
+            peerid = -1;
+            
+            // Upgrade indirect connection to a direct one
+            if((peeraddrIsInternal(&mgt->data[dupid].remoteaddr)) && (!peeraddrIsInternal(source_addr))) {
+                mgt->data[dupid].remoteaddr = *source_addr;
+                peermgtSendPingToAddr(mgt, NULL, dupid, mgt->data[dupid].conntime, source_addr); // send a ping using the new peer address
+            }
+        }
+        if(peerid > 0) {
+            // NodeID gets accepted here.
+            authmgtAcceptAuthedPeer(authmgt, peerid, seqGet(&mgt->data[peerid].seq), mgt->localflags);
+        }
+        else {
+            // Reject authentication attempt because local PeerID could not be generated.
+            authmgtRejectAuthedPeer(authmgt);
+        }
+    }
+    if(authmgtGetCompletedPeerNodeID(authmgt, &peer_nodeid)) {
+        peerid = peermgtGetID(mgt, &peer_nodeid);
+        if((peerid > 0) && (mgt->data[peerid].state >= peermgt_STATE_AUTHED) && (authmgtGetCompletedPeerLocalID(authmgt)) == peerid) {
+            // Node data gets completed here.
+            authmgtGetCompletedPeerAddress(authmgt, &mgt->data[peerid].remoteid, &mgt->data[peerid].remoteaddr);
+            authmgtGetCompletedPeerSessionKeys(authmgt, &mgt->ctx[peerid]);
+            authmgtGetCompletedPeerConnectionParams(authmgt, &mgt->data[peerid].remoteseq, &remoteflags);
+            mgt->data[peerid].remoteflags = remoteflags;
+            mgt->data[peerid].state = peermgt_STATE_COMPLETE;
+            mgt->data[peerid].lastrecv = tnow;
+        }
+        authmgtFinishCompletedPeer(authmgt);
+    }
+    return 1;
 }
 
 
@@ -1248,50 +1252,64 @@ static void peermgtStatus(struct s_peermgt *mgt, char *report, const int report_
 
 
 // Create peer manager object.
+// @NOTE: i'm not going to clean resources during failed init because whole app will break down if something goes wrong
 static int peermgtCreate(struct s_peermgt *mgt, const int peer_slots, const int auth_slots, struct s_nodekey *local_nodekey, struct s_dh_state *dhstate) {
 	const char *defaultid = "default";
 	struct s_peermgt_data *data_mem;
 	struct s_crypto *ctx_mem;
 
-	if((peer_slots > 0) && (auth_slots > 0) && (peermgtSetNetID(mgt, defaultid, 7))) {
-		data_mem = malloc(sizeof(struct s_peermgt_data) * (peer_slots + 1));
-		if(data_mem != NULL) {
-			ctx_mem = malloc(sizeof(struct s_crypto) * (peer_slots + 1));
-			if(ctx_mem != NULL) {
-				if(cryptoCreate(ctx_mem, (peer_slots + 1))) {
-					if(dfragCreate(&mgt->dfrag, peermgt_MSGSIZE_MIN, peermgt_FRAGBUF_COUNT)) {
-						if(authmgtCreate(&mgt->authmgt, &mgt->netid, auth_slots, local_nodekey, dhstate)) {
-							if(nodedbCreate(&mgt->relaydb, (peer_slots + 1), peermgt_RELAYDB_NUM_PEERADDRS)) {
-								if(nodedbCreate(&mgt->nodedb, ((peer_slots * 8) + 1), peermgt_NODEDB_NUM_PEERADDRS)) {
-									if(mapCreate(&mgt->map, (peer_slots + 1), nodeid_SIZE, 1)) {
-										mgt->nodekey = local_nodekey;
-										mgt->data = data_mem;
-										mgt->ctx = ctx_mem;
-										mgt->rrmsg.msg = mgt->rrmsgbuf;
-										if(peermgtInit(mgt)) {
-											return 1;
-										}
-										mgt->nodekey = NULL;
-										mgt->data = NULL;
-										mgt->ctx = NULL;
-										mapDestroy(&mgt->map);
-									}
-									nodedbDestroy(&mgt->nodedb);
-								}
-								nodedbDestroy(&mgt->relaydb);
-							}
-							authmgtDestroy(&mgt->authmgt);
-						}
-						dfragDestroy(&mgt->dfrag);
-					}
-					cryptoDestroy(ctx_mem, (peer_slots + 1));
-				}
-				free(ctx_mem);
-			}
-			free(data_mem);
-		}
-	}
-	return 0;
+	if(peer_slots <= 0 || auth_slots <= 0  || !peermgtSetNetID(mgt, defaultid, 7)) {
+        debugf("Failed to create PeerMgr, peer_slots: %d, auth_slots: %d", peer_slots, auth_slots);
+        return 0;
+    }
+    
+    data_mem = malloc(sizeof(struct s_peermgt_data) * (peer_slots + 1));
+    if(data_mem == NULL) {
+        debug("failed to allocate memory for s_peermgt_data");
+        return 0;
+    }
+    
+    ctx_mem = malloc(sizeof(struct s_crypto) * (peer_slots + 1));
+    if(ctx_mem == NULL) {
+        debug("failed to allocate memory for s_crypto");
+    }
+    
+    if(!cryptoCreate(ctx_mem, (peer_slots + 1))) {
+        debug("failed to create crypto engine");
+        return 0;
+    }
+
+    if(!dfragCreate(&mgt->dfrag, peermgt_MSGSIZE_MIN, peermgt_FRAGBUF_COUNT)) {
+        debug("failed to create defrag");
+        return 0;
+    }
+    
+    if(!authmgtCreate(&mgt->authmgt, &mgt->netid, auth_slots, local_nodekey, dhstate)) {
+        debug("failed to create authmgt");
+        return 0;
+    }
+
+    if(!nodedbCreate(&mgt->relaydb, (peer_slots + 1), peermgt_RELAYDB_NUM_PEERADDRS)) {
+        debug("failed to create NodeDB for relays");
+        return 0;
+    }
+
+    if(!nodedbCreate(&mgt->nodedb, ((peer_slots * 8) + 1), peermgt_NODEDB_NUM_PEERADDRS)) {
+        debug("failed to create NodeDB for peers");
+        return 0;
+    }
+    
+    if(!mapCreate(&mgt->map, (peer_slots + 1), nodeid_SIZE, 1)) {
+        debug("failed to create map");
+        return 0;
+    }
+    
+    mgt->nodekey = local_nodekey;
+    mgt->data = data_mem;
+    mgt->ctx = ctx_mem;
+    mgt->rrmsg.msg = mgt->rrmsgbuf;
+    
+    return peermgtInit(mgt);
 }
 
 
