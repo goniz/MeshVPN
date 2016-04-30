@@ -23,6 +23,7 @@
 
 #include "rsa.c"
 
+#define NODEID_SIZE 32
 
 // NodeID size in bytes.
 #define nodeid_SIZE 32
@@ -35,7 +36,7 @@
 
 // The nodeid structure.
 struct s_nodeid {
-	unsigned char id[nodeid_SIZE];
+	unsigned char id[NODEID_SIZE];
 };
 
 
@@ -45,6 +46,10 @@ struct s_nodekey {
 	struct s_rsa key;
 };
 
+static int nodeidExtract(char * buffer, struct s_nodeid * node) {
+    memcpy(buffer, node->id, NODEID_SIZE);
+    buffer[NODEID_SIZE] = '\0';
+}
 
 // Create a NodeKey object.
 static int nodekeyCreate(struct s_nodekey *nodekey) {

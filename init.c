@@ -285,7 +285,7 @@ void init(struct s_initconfig *initconfig) {
 	i = 0;
 	if(initconfig->enableseccomp) {		
 		i = seccompEnable();
-                msgf("Seccomp activation status %d", i);
+        msgf("Seccomp activation status %d", i);
 	}
 	if(initconfig->forceseccomp) {
 		if(!i) throwError("Failed to enable seccomp sandboxing!\nTo ignore this, set the \"forceseccomp\" option to \"no\".");

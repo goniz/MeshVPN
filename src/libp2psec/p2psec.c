@@ -163,13 +163,8 @@ void p2psecSetNetname(P2PSEC_CTX *p2psec, const char *netname, const int netname
 
 
 void p2psecSetPassword(P2PSEC_CTX *p2psec, const char *password, const int password_len) {
-	int len;
-	if(password_len < 1024) {
-		len = password_len;
-	}
-	else {
-		len = 1023;
-	}
+    int len = (password_len < 1024) ? password_len : 1023;
+    
 	memset(p2psec->password, 0, 1024);
 	if(len > 0) {
 		memcpy(p2psec->password, password, len);
@@ -326,9 +321,15 @@ int p2psecInputPacket(P2PSEC_CTX *p2psec, const unsigned char *packet_input, con
 unsigned char *p2psecRecvMSG(P2PSEC_CTX *p2psec, unsigned char *source_nodeid, int *message_len) {
 	struct s_msg msg;
 	struct s_nodeid nodeid;
+    char nodeIdHuman[NODEID_SIZE + 1];
+    
 	if(peermgtRecvUserdata(&p2psec->mgt, &msg, &nodeid, NULL, NULL)) {
 		*message_len = msg.len;
-		if(source_nodeid != NULL) memcpy(source_nodeid, nodeid.id, nodeid_SIZE);
+		if(source_nodeid != NULL) memcpy(source_nodeid, nodeid.id, NODEID_SIZE);
+        nodeidExtract(nodeIdHuman, &nodeid);
+        
+        debugf("[%s] Recieved MSG", nodeIdHuman);
+
 		return msg.msg;
 	}
 	else {
