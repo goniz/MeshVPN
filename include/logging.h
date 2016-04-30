@@ -17,10 +17,15 @@ void msg(char *);
 
 void msgf(char *,...);
 
+void debugMsg(const char *format,const char *file,const int line, ...);
+
 #ifdef DEBUG
-	#define debug(...) msgf(__VA_ARGS__)
+	#define debug(format) debugMsg(format, __FILE__, __LINE__)
+    #define debugf(format, ...) debugMsg(format, __FILE__, __LINE__, __VA_ARGS__)
+
 #else
-	#define debug(...) 
+	#define debug(format)
+    #define debugf(format, ...)
 #endif /** DEBUG BLOCK */
 
 #endif /** HEADER GUARD */

@@ -30,7 +30,7 @@
 #include "platform/io.c"
 #include "platform/ifconfig.c"
 #include "platform/seccomp.c"
-#include "globals.ic"
+#include "include/globals.h"
 #include "console.ic"
 #include "mainloop.c"
 #include "config.c"

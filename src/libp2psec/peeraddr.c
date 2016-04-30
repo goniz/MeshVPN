@@ -22,6 +22,8 @@
 
 
 #include "util.c"
+#include "string.h"
+#include <arpa/inet.h>
 
 
 // Internal address types.
@@ -97,6 +99,20 @@ static void peeraddrSetIndirect(struct s_peeraddr *peeraddr, const int relayid, 
 	utilWriteInt32(&peeraddr->addr[12], relayct);
 	utilWriteInt32(&peeraddr->addr[16], peerid);
 	utilWriteInt32(&peeraddr->addr[20], 0);
+}
+
+/**
+ * Copy human readable peer address to buffer
+ */
+static void peeraddrToHuman(char * buffer, const struct s_peeraddr * peeraddr) {
+    char res[64];
+    inet_ntop(AF_INET, &peeraddr->addr[4], res, 64);
+    
+    if(peeraddrGetInternalType(peeraddr) == peeraddr_INTERNAL_INDIRECT) {
+        strcpy(buffer, "INDIRECT");
+    } else {
+        strcpy(buffer, res);
+    }
 }
 
 

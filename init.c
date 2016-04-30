@@ -159,19 +159,19 @@ void init(struct s_initconfig *initconfig) {
                         if(strlen(initconfig->ifconfig4) > 0) {
 				// configure IPv4 address
 				if(!(ifconfig4(tapname, strlen(tapname), initconfig->ifconfig4, strlen(initconfig->ifconfig4)))) {
-					logWarning("Could not automatically configure IPv4 address!");
+					debug("Could not automatically configure IPv4 address!");
 				}
 			}
 			if(strlen(initconfig->ifconfig6) > 0) {
 				// configure IPv6 address
 				if(!(ifconfig6(tapname, strlen(tapname), initconfig->ifconfig6, strlen(initconfig->ifconfig6)))) {
-					logWarning("Could not automatically configure IPv6 address!");
+					debug("Could not automatically configure IPv6 address!");
 				}
 			}
 			if(strlen(initconfig->upcmd) > 0) {
 				// execute shell command
 				if((ifconfigExec(initconfig->upcmd)) < 0) {
-					logWarning("The command specified in the \"upcmd\" option returned an error!");
+					debug("The command specified in the \"upcmd\" option returned an error!");
 				}
 			}
 		}

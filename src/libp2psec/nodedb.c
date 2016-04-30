@@ -60,7 +60,7 @@ static void nodedbUpdate(struct s_nodedb *db, struct s_nodeid *nodeid, struct s_
 	struct s_map *newaddrset;
 	struct s_nodedb_addrdata *addrdata;
 	struct s_nodedb_addrdata addrdata_new;
-
+   
 	if(db != NULL && nodeid != NULL && addr != NULL) {
 		addrset = mapGet(db->addrdb, nodeid->id);
 		if(addrset == NULL) {

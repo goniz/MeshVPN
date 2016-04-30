@@ -333,29 +333,23 @@ static void peermgtDeleteID(struct s_peermgt *mgt, const int peerid) {
 
 // Connect to a new peer.
 static int peermgtConnect(struct s_peermgt *mgt, const struct s_peeraddr *remote_addr) {
-	int addr_ok;
-	addr_ok = 0;
-	if(remote_addr != NULL) {
-		if(peeraddrIsInternal(remote_addr)) {
-			if(peermgtIsValidIndirectPeerAddr(mgt, remote_addr)) {
-				addr_ok = 1;
-			}
-		}
-		else {
-			addr_ok = 1;
-		}
-	}
-	if(addr_ok) {
-		if(authmgtStart(&mgt->authmgt, remote_addr)) {
-			return 1;
-		}
-		else {
-			return 0;
-		}
-	}
-	else {
-		return 0;
-	}
+	if(remote_addr == NULL) {
+        return 0;
+    }
+    
+    if(peeraddrIsInternal(remote_addr) && !peermgtIsValidIndirectPeerAddr(mgt, remote_addr)) {
+        return 0;
+    }
+    
+
+    if(!authmgtStart(&mgt->authmgt, remote_addr)) {
+        return 0;
+    }
+    
+    char visibleIp[64];
+    peeraddrToHuman(visibleIp, remote_addr);
+    debugf("New connection initiated to %s", visibleIp);
+    return 1;
 }
 
 
@@ -487,6 +481,9 @@ static int peermgtGetNextPacketGen(struct s_peermgt *mgt, unsigned char *pbuf, c
 	struct s_packet_data data;
 	struct s_nodeid *nodeid;
 	struct s_peeraddr *peeraddr;
+    char humanIp[60];
+    
+    peeraddrToHuman(humanIp, target);
 
 	// send out user data
 	outlen = mgt->outmsg.len;
@@ -675,6 +672,8 @@ static int peermgtGetNextPacketGen(struct s_peermgt *mgt, unsigned char *pbuf, c
 			nodedbUpdate(&mgt->nodedb, nodeid, peeraddr, 0, 0, 1);
 			if(peerid < 0) { // node is not connected yet
 				if(peermgtConnect(mgt, peeraddr)) { // try to connect
+                    debugf("Trying to connect with %s", humanIp);
+                    
 					j = nodedbGetDBID(&mgt->relaydb, nodeid, peermgt_NEWCONNECT_RELAY_MAX_LASTSEEN, -1, peermgt_NEWCONNECT_MIN_LASTCONNTRY);
 					if(!(j < 0)) {
 						peermgtConnect(mgt, nodedbGetNodeAddress(&mgt->relaydb, j)); // try to connect via relay

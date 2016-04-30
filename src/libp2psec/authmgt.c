@@ -253,67 +253,74 @@ static int authmgtDecodeMsg(struct s_authmgt *mgt, const unsigned char *msg, con
 	int tnow = utilGetClock();
 	int newsession;
 	int dupid;
-	if(msg_len > 4) {
-		authid = utilReadInt32(msg);
-		if(authid > 0) {
-			// message belongs to existing auth session
-			authstateid = (authid - 1);
-			if(authstateid < idspSize(&mgt->idsp)) {
-				if(authDecodeMsg(&mgt->authstate[authstateid], msg, msg_len)) {
-					mgt->lastrecv[authstateid] = tnow;
-					mgt->peeraddr[authstateid] = *peeraddr;
-					if(mgt->fastauth) {
-						mgt->lastsend[authstateid] = (tnow - authmgt_RESEND_TIMEOUT - 3);
-					}
-					if((authIsAuthed(&mgt->authstate[authstateid])) && (!authIsCompleted(&mgt->authstate[authstateid]))) mgt->current_authed_id = authstateid;
-					if((authIsCompleted(&mgt->authstate[authstateid])) && (!authIsPeerCompleted(&mgt->authstate[authstateid]))) mgt->current_completed_id = authstateid;
-					return 1;
-				}
-			}
-		}
-		else if(authid == 0) {
-			// message requests new auth session
-			dupid = authmgtFindAddr(mgt, peeraddr);
-			if(dupid < 0) {
-				newsession = 1;
-			}
-			else {
-				// auth session with same PeerAddr found.
-				if(authIsPreauth(&mgt->authstate[dupid])) {
-					newsession = 0;
-				}
-				else {
-					authmgtDelete(mgt, dupid);
-					newsession = 1; // replace old auth session
-				}
-			}
-			if(newsession) {
-				authstateid = authmgtNew(mgt, peeraddr);
-				if(authstateid < 0) {
-					// all auth slots are full, search for unused sessions that can be replaced
-					dupid = authmgtFindUnused(mgt);
-					if(!(dupid < 0)) {
-						authmgtDelete(mgt, dupid);
-						authstateid = authmgtNew(mgt, peeraddr);
-					}
-				}
-				if(!(authstateid < 0)) {
-					if(authDecodeMsg(&mgt->authstate[authstateid], msg, msg_len)) {
-						mgt->lastrecv[authstateid] = tnow;
-						mgt->peeraddr[authstateid] = *peeraddr;
-						if(mgt->fastauth) {
-							mgt->lastsend[authstateid] = (tnow - authmgt_RESEND_TIMEOUT - 3);
-						}
-						return 1;
-					}
-					else {
-						authmgtDelete(mgt, authstateid);
-					}
-				}
-			}
-		}
-	}
-	return 0;
+    char humanIp[60];
+    peeraddrToHuman(humanIp, peeraddr);
+    
+	if(msg_len <= 4) {
+        return 0;
+    }
+    
+    authid = utilReadInt32(msg);
+    if(authid > 0) {
+        // message belongs to existing auth session
+        authstateid = (authid - 1);
+        if(authstateid >= idspSize(&mgt->idsp)) {
+            return 0;
+        }
+        
+        if(!authDecodeMsg(&mgt->authstate[authstateid], msg, msg_len)) {
+            return 0;
+        }
+        
+        mgt->lastrecv[authstateid] = tnow;
+        mgt->peeraddr[authstateid] = *peeraddr;
+        if(mgt->fastauth) {
+            mgt->lastsend[authstateid] = (tnow - authmgt_RESEND_TIMEOUT - 3);
+        }
+        if((authIsAuthed(&mgt->authstate[authstateid])) && (!authIsCompleted(&mgt->authstate[authstateid]))) mgt->current_authed_id = authstateid;
+        if((authIsCompleted(&mgt->authstate[authstateid])) && (!authIsPeerCompleted(&mgt->authstate[authstateid]))) mgt->current_completed_id = authstateid;
+        
+        return 1;
+    } else if(authid == 0) {
+        // message requests new auth session
+        dupid = authmgtFindAddr(mgt, peeraddr);
+        
+        // we already have this session
+        if(dupid >= 0) {
+            // auth session with same PeerAddr found.
+            if(authIsPreauth(&mgt->authstate[dupid])) {
+                return 0;
+            }
+        
+            authmgtDelete(mgt, dupid);
+        }
+        
+        authstateid = authmgtNew(mgt, peeraddr);
+        if(authstateid < 0) {
+            // all auth slots are full, search for unused sessions that can be replaced
+            dupid = authmgtFindUnused(mgt);
+            if(!(dupid < 0)) {
+                authmgtDelete(mgt, dupid);
+                authstateid = authmgtNew(mgt, peeraddr);
+            }
+        }
+        if(!(authstateid < 0)) {
+            if(authDecodeMsg(&mgt->authstate[authstateid], msg, msg_len)) {
+                mgt->lastrecv[authstateid] = tnow;
+                mgt->peeraddr[authstateid] = *peeraddr;
+                if(mgt->fastauth) {
+                    mgt->lastsend[authstateid] = (tnow - authmgt_RESEND_TIMEOUT - 3);
+                }
+                return 1;
+            }
+            else {
+                authmgtDelete(mgt, authstateid);
+            }
+        }
+        
+    }
+    
+    return 0;
 }
 
 

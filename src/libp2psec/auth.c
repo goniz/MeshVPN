@@ -190,27 +190,37 @@ static void authGenS0(struct s_auth_state *authstate) {
 }
 
 
+
 // Decode auth message S0
 static int authDecodeS0(struct s_auth_state *authstate, const unsigned char *msg, const int msg_len) {
-	int msgnum;
-	unsigned char checksum[8];
-	if(msg_len >= (4 + 2 + 8 + 4 + 4 + netid_SIZE)) {
-		msgnum = utilReadInt16(&msg[4]);
-		if(msgnum == (authstate->state + 1)) {
-			if(cryptoCalculateSHA256(checksum, 8, &msg[(4 + 2 + 8)], (4 + 4 + netid_SIZE))) {
-				if(memcmp(checksum, &msg[(4 + 2)], 8) == 0) {
-					if(memcmp(authstate->netid->id, &msg[(4 + 2 + 8 + 4 + 4)], netid_SIZE) == 0) {
-						memcpy(authstate->remote_authid, &msg[(4 + 2 + 8)], 4);
-						memcpy(authstate->remote_sesstoken, &msg[(4 + 2 + 8 + 4)], 4);
-						return 1;
-					}
-				}
-			}
-		}
-	}
-	return 0;
+    int msgnum;
+    unsigned char checksum[8];
+    if(msg_len < (4 + 2 + 8 + 4 + 4 + netid_SIZE)) {
+        return 0;
+    }
+    
+    msgnum = utilReadInt16(&msg[4]);
+    if(msgnum != (authstate->state + 1)) {
+        return 0;
+    }
+    
+    if(!cryptoCalculateSHA256(checksum, 8, &msg[(4 + 2 + 8)], (4 + 4 + netid_SIZE))) {
+        return 0;
+    }
+    
+    if(memcmp(checksum, &msg[(4 + 2)], 8) != 0) {
+        return 0;
+    }
+    
+    if(memcmp(authstate->netid->id, &msg[(4 + 2 + 8 + 4 + 4)], netid_SIZE) != 0) {
+        return 0;
+    }
+    
+    memcpy(authstate->remote_authid, &msg[(4 + 2 + 8)], 4);
+    memcpy(authstate->remote_sesstoken, &msg[(4 + 2 + 8 + 4)], 4);
+    
+    return 1;
 }
-
 
 // Generate auth message S1
 static void authGenS1(struct s_auth_state *authstate) {
@@ -243,36 +253,53 @@ static int authDecodeS1(struct s_auth_state *authstate, const unsigned char *msg
 	int dhsize;
 	unsigned char shared_nonce[auth_NONCESIZE + auth_NONCESIZE];
 	unsigned char checksum[8];
-	if(msg_len > (4 + 2 + 8 + 4 + auth_NONCESIZE + 2)) {
-		msgnum = utilReadInt16(&msg[4]);
-		if(msgnum == (authstate->state + 1)) {
-			if(memcmp(authstate->local_sesstoken, &msg[(4 + 2 + 8)], 4) == 0) {
-				dhsize = utilReadInt16(&msg[(4 + 2 + 8 + 4 + auth_NONCESIZE)]);
-				if((dhsize > dh_MINSIZE) && (dhsize <= dh_MAXSIZE) && (msg_len >= (4 + 2 + 8 + 4 + auth_NONCESIZE + 2 + dhsize))) {
-					if(cryptoCalculateSHA256(checksum, 8, &msg[(4 + 2 + 8)], (4 + auth_NONCESIZE + 2 + dhsize))) {
-						if(memcmp(checksum, &msg[(4 + 2)], 8) == 0) {
-							authstate->remote_dhkey_size = dhsize;
-							memcpy(authstate->remote_dhkey, &msg[(4 + 2 + 8 + 4 + auth_NONCESIZE + 2)], dhsize);
-							memcpy(authstate->remote_nonce, &msg[(4 + 2 + 8 + 4)], auth_NONCESIZE);
-							if(memcmp(authstate->local_nonce, authstate->remote_nonce, auth_NONCESIZE) != 0) {
-								if((msgnum % 2) == 0) {
-									memcpy(&shared_nonce[0], &msg[(4 + 2 + 8 + 4)], auth_NONCESIZE);
-									memcpy(&shared_nonce[auth_NONCESIZE], authstate->local_nonce, auth_NONCESIZE);
-								}
-								else {
-									memcpy(&shared_nonce[0], authstate->local_nonce, auth_NONCESIZE);
-									memcpy(&shared_nonce[auth_NONCESIZE], &msg[(4 + 2 + 8 + 4)], auth_NONCESIZE);
-								}
-								if(dhGenCryptoKeys(authstate->crypto_ctx, auth_CRYPTOCTX_COUNT, authstate->dhstate, &msg[(4 + 2 + 8 + 4 + auth_NONCESIZE + 2)], dhsize, shared_nonce, (auth_NONCESIZE + auth_NONCESIZE))) {
-									return 1;
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+	
+    if(msg_len <= (4 + 2 + 8 + 4 + auth_NONCESIZE + 2)) {
+        return 0;
+    }
+    
+    msgnum = utilReadInt16(&msg[4]);
+    if(msgnum != (authstate->state + 1)) {
+        return 0;
+    }
+    
+    if(memcmp(authstate->local_sesstoken, &msg[(4 + 2 + 8)], 4) != 0) {
+        return 0;
+    }
+    
+    dhsize = utilReadInt16(&msg[(4 + 2 + 8 + 4 + auth_NONCESIZE)]);
+    if(!((dhsize > dh_MINSIZE) && (dhsize <= dh_MAXSIZE) && (msg_len >= (4 + 2 + 8 + 4 + auth_NONCESIZE + 2 + dhsize)))) {
+        return 0;
+    }
+    
+    if(!cryptoCalculateSHA256(checksum, 8, &msg[(4 + 2 + 8)], (4 + auth_NONCESIZE + 2 + dhsize))) {
+        return 0;
+    }
+    
+    if(memcmp(checksum, &msg[(4 + 2)], 8) != 0) {
+        return 0;
+    }
+    
+    authstate->remote_dhkey_size = dhsize;
+    memcpy(authstate->remote_dhkey, &msg[(4 + 2 + 8 + 4 + auth_NONCESIZE + 2)], dhsize);
+    memcpy(authstate->remote_nonce, &msg[(4 + 2 + 8 + 4)], auth_NONCESIZE);
+    
+    if(memcmp(authstate->local_nonce, authstate->remote_nonce, auth_NONCESIZE) == 0) {
+        return 0;
+    }
+    
+    if((msgnum % 2) == 0) {
+        memcpy(&shared_nonce[0], &msg[(4 + 2 + 8 + 4)], auth_NONCESIZE);
+        memcpy(&shared_nonce[auth_NONCESIZE], authstate->local_nonce, auth_NONCESIZE);
+    } else {
+        memcpy(&shared_nonce[0], authstate->local_nonce, auth_NONCESIZE);
+        memcpy(&shared_nonce[auth_NONCESIZE], &msg[(4 + 2 + 8 + 4)], auth_NONCESIZE);
+    }
+    
+    if(dhGenCryptoKeys(authstate->crypto_ctx, auth_CRYPTOCTX_COUNT, authstate->dhstate, &msg[(4 + 2 + 8 + 4 + auth_NONCESIZE + 2)], dhsize, shared_nonce, (auth_NONCESIZE + auth_NONCESIZE))) {
+        return 1;
+    }
+    
 	return 0;
 }
 
@@ -296,7 +323,8 @@ static void authGenS2(struct s_auth_state *authstate) {
 	siginbuf_size = authGenSigIn(authstate, siginbuf, &unencrypted_nextmsg[4]);
 	local_nodekey = authstate->local_nodekey;
 	nksize = nodekeyGetDER(&unencrypted_nextmsg[(4 + 2 + 2)], nodekey_MAXSIZE, local_nodekey);
-	if(nksize > nodekey_MINSIZE) {
+	
+    if(nksize > nodekey_MINSIZE) {
 		utilWriteInt16(&unencrypted_nextmsg[(4 + 2)], nksize);
 		rsakey = &local_nodekey->key;
 		signsize = rsaSign(rsakey, &unencrypted_nextmsg[(4 + 2 + 2 + nksize + 2)], nodekey_MAXSIZE, siginbuf, siginbuf_size);
@@ -510,14 +538,13 @@ static int authDecodeMsg(struct s_auth_state *authstate, const unsigned char *ms
 		case auth_S4a:  if(authDecodeS4(authstate, msg, msg_len)) newstate = auth_S5a; break;
 	}
 	
-	if(state != newstate) {
-		authstate->state = newstate;
-		authGenMsg(authstate);
-		return 1;
-	}
-	else {
-		return 0;
-	}
+	if(state == newstate) {
+        return 0;
+    }
+    
+    authstate->state = newstate;
+    authGenMsg(authstate);
+    return 1;
 }
 
 
