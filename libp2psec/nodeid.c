@@ -60,23 +60,21 @@ static int nodekeyGetDER(unsigned char *buf, const int buf_size, const struct s_
 
 // Generate a new NodeKey with public/private key pair. 
 static int nodekeyGenerate(struct s_nodekey *nodekey, const int key_size) {
-	if(rsaGenerate(&nodekey->key, key_size)) {		
-		return rsaGetFingerprint(nodekey->nodeid.id, nodeid_SIZE, &nodekey->key);
-	}
-	else {
-		return 0;
-	}
+	if(!rsaGenerate(&nodekey->key, key_size)) {
+        return 0;
+    }
+    
+    return rsaGetFingerprint(nodekey->nodeid.id, nodeid_SIZE, &nodekey->key);
 }
 
 
 // Load NodeKey from DER encoded public key.
 static int nodekeyLoadDER(struct s_nodekey *nodekey, const unsigned char *pubkey, const int pubkey_size) {
-	if(rsaLoadDER(&nodekey->key, pubkey, pubkey_size)) {
-		return rsaGetFingerprint(nodekey->nodeid.id, nodeid_SIZE, &nodekey->key);
-	}
-	else {
-		return 0;
-	}
+	if(!rsaLoadDER(&nodekey->key, pubkey, pubkey_size)) {
+        return 0;
+    }
+    
+    return rsaGetFingerprint(nodekey->nodeid.id, nodeid_SIZE, &nodekey->key);
 }
 
 

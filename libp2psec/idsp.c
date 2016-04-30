@@ -20,7 +20,7 @@
 #ifndef F_IDSP_C
 #define F_IDSP_C
 
-
+#include "../include/logging.h"
 #include <stdlib.h>
 
 

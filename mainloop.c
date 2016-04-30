@@ -17,12 +17,6 @@
  ***************************************************************************/
 #include "include/logging.h"
 
-// generates warning message
-static void logWarning(char *msg) {
-	if(msg != NULL) printf("[%d] warning: %s\n", p2psecUptime(g_p2psec), msg);
-}
-
-
 // Connect initpeers.
 static void connectInitpeers() {
 	int i,j,k,l;
@@ -108,7 +102,7 @@ static void mainLoop() {
 					switchFrameIn(&g_switchstate, msg, msg_len, source_peerid, source_peerct);
 					ndp6PacketIn(&g_ndpstate, msg, msg_len, source_peerid, source_peerct);
 					if(!(ioWriteGroup(&iostate, IOGRP_TAP, msg, msg_len, NULL) > 0)) {
-						logWarning("could not write to tap device!");
+						debug("could not write to tap device!");
 					}
 				}
 				
@@ -116,7 +110,7 @@ static void mainLoop() {
 				while((sockdata_len = (p2psecOutputPacket(g_p2psec, sockdata_buf, 4096, new_peeraddr.addr))) > 0) {
 					sockdata_lastlen = sockdata_len;
 					if(!(ioWriteGroup(&iostate, IOGRP_SOCKET, sockdata_buf, sockdata_len, &new_peeraddr) > 0)) {
-						logWarning("could not send packet!");
+						debug("could not send packet!");
 					}
 				}
 			}
@@ -135,7 +129,7 @@ static void mainLoop() {
 					msg_offset = msg_len - sockdata_lastlen;
 					if(memcmp(&msg_buf[msg_offset], sockdata_buf, sockdata_lastlen) == 0) {
 						// drop packets which have been sent out via PeerVPN's socket before to avoid loops
-						logWarning("recursive packet filtered!");
+						debug("recursive packet filtered!");
 						msg_ok = 0;
 					}
 				}
@@ -145,7 +139,7 @@ static void mainLoop() {
 					if((g_enablevirtserv) && ((tapmsg_len = (virtservFrame(&g_virtserv, tapmsg_buf, 1024, msg_buf, msg_len))) > 0)) {
 						// virtual service frame
 						if(!(ioWriteGroup(&iostate, IOGRP_TAP, tapmsg_buf, tapmsg_len, NULL) > 0)) {
-							logWarning("could not write to tap device!");
+							debug("could not write to tap device!");
 						}
 					}
 					else {
@@ -176,7 +170,7 @@ static void mainLoop() {
 									if(peermgtIsActiveIDCT(&g_p2psec->mgt, ndp_peerid, ndp_peerct)) {
 										// answer from cache
 										if(!(ioWriteGroup(&iostate, IOGRP_TAP, tapmsg_buf, tapmsg_len, NULL) > 0)) {
-											logWarning("could not write to tap device!");
+											debug("could not write to tap device!");
 										}
 									}
 									else {
@@ -199,7 +193,7 @@ static void mainLoop() {
 						while((sockdata_len = (p2psecOutputPacket(g_p2psec, sockdata_buf, 4096, new_peeraddr.addr))) > 0) {
 							sockdata_lastlen = sockdata_len;
 							if(!(ioWriteGroup(&iostate, IOGRP_SOCKET, sockdata_buf, sockdata_len, &new_peeraddr) > 0)) {
-								logWarning("could not send packet!");
+								debug("could not send packet!");
 							}
 						}
 					}
@@ -214,7 +208,7 @@ static void mainLoop() {
 		while((sockdata_len = (p2psecOutputPacket(g_p2psec, sockdata_buf, 4096, new_peeraddr.addr))) > 0) {
 			sockdata_lastlen = sockdata_len;
 			if(!(ioWriteGroup(&iostate, IOGRP_SOCKET, sockdata_buf, sockdata_len, &new_peeraddr) > 0)) {
-				logWarning("could not send packet!");
+				debug("could not send packet!");
 			}
 		}
 
@@ -223,7 +217,7 @@ static void mainLoop() {
 			laststatus = tnow;
 			connectcount = p2psecPeerCount(g_p2psec);
 			if(lastconnectcount != connectcount) {
-				msgf("[%d] %d peers connected.\n", p2psecUptime(g_p2psec), connectcount);
+				msgf("Uptime, %d secs, %d peers connected", p2psecUptime(g_p2psec), connectcount);
 				lastconnectcount = connectcount;
 			}
 		}

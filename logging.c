@@ -2,6 +2,7 @@
 #include "stdio.h"
 #include <syslog.h>
 #include <stdarg.h>
+#include <string.h>
 
 int logging_mode = LOGGING_NONE;
 
@@ -41,4 +42,22 @@ void msgf(char * fmt, ...) {
 	va_end(ap);
 
 	return msg(buffer);
+}
+
+void debugMsg(const char * format, const char * file, const int line, ...) {
+    char prepend[128];
+    char msg_res[256];
+    char res[384];
+    
+    snprintf(prepend, 128, "[DEBUG] [%s:%d] ", file, line);
+    
+    va_list ap;
+    va_start(ap, line);
+    int ret = vsnprintf(msg_res, 256, format, ap);
+    va_end(ap);
+    
+    strcpy(res, prepend);
+    strcat(res, msg_res);
+    
+    msg(res);
 }

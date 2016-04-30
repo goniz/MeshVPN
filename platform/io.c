@@ -44,6 +44,8 @@
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
+#include <arpa/inet.h>
+
 
 #if defined(IO_LINUX) || defined(IO_BSD)
 #include <netdb.h>
@@ -149,6 +151,8 @@ static int ioResolveName(struct s_io_addrinfo *iai, const char *hostname, const 
 	struct addrinfo hints;
 
 	ret = 0;
+    debugf("Trying to resolve %s", hostname);
+    
 	if(hostname != NULL && port != NULL) {
 		memset(&hints,0,sizeof(struct addrinfo));
 
@@ -191,6 +195,10 @@ static int ioResolveName(struct s_io_addrinfo *iai, const char *hostname, const 
 		}
 
 	}
+    
+    
+    
+    debugf("Resolved total %d addresses", ret);
 	iai->count = ret;
 	return ret;
 }

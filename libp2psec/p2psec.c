@@ -21,7 +21,8 @@
 #define F_P2PSEC_C
 
 
-#include "p2psec.h"
+#include "../include/p2psec.h"
+#include "../include/logging.h"
 #include "peermgt.c"
 
 
@@ -308,6 +309,7 @@ void p2psecNodeDBStatus(P2PSEC_CTX *p2psec, char *status_report, const int statu
 
 
 int p2psecConnect(P2PSEC_CTX *p2psec, const unsigned char *destination_addr) {
+    debugf("P2P connection to %s", destination_addr);
 	struct s_peeraddr addr;
 	memcpy(addr.addr, destination_addr, peeraddr_SIZE);
 	return peermgtConnect(&p2psec->mgt, &addr);
