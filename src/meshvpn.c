@@ -60,7 +60,8 @@ int main(int argc, char **argv) {
 	strcpy(config.networkname,"MESHVPN");
 	strcpy(config.initpeers,"");
 	strcpy(config.engines,"");
-        strcpy(config.pidfile, "");
+    strcpy(config.pidfile, "");
+    strcpy(config.privatekey, "/var/run/peervpn.pem");
 	config.password_len = 0;
 	config.enablepidfile = 0;
 	config.enableeth = 1;
@@ -71,7 +72,7 @@ int main(int argc, char **argv) {
 	config.enableconsole = 0;
 	config.enableseccomp = 0;
 	config.forceseccomp = 0;
-        config.daemonize = 0;
+    config.daemonize = 0;
 	config.enableprivdrop = 1;
 	config.enableipv4 = 1;
 	config.enableipv6 = 1;

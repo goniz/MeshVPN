@@ -32,6 +32,8 @@ struct s_initconfig {
 	char engines[CONFPARSER_NAMEBUF_SIZE+1];
 	char password[CONFPARSER_NAMEBUF_SIZE+1];
 	char pidfile[CONFPARSER_NAMEBUF_SIZE+1];
+    char privatekey[CONFPARSER_NAMEBUF_SIZE+1];
+    
 	int password_len;
 	int enablepidfile;
 	int enableindirect;
@@ -166,6 +168,10 @@ static int parseConfigLine(char *line, int len, struct s_initconfig *cs) {
 		cs->enablepidfile = 1;
 		return 1;
 	}
+    else if(parseConfigLineCheckCommand(line, len, "privatekey", &vpos)) {
+        strncpy(cs->privatekey, &line[vpos], CONFPARSER_NAMEBUF_SIZE);
+        return 1;
+    }
 	else if(parseConfigLineCheckCommand(line,len,"chroot",&vpos)) {
 		strncpy(cs->chrootstr,&line[vpos],CONFPARSER_NAMEBUF_SIZE);
 		return 1;

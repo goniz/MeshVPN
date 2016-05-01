@@ -29,7 +29,7 @@ void msg(char * msg) {
 	if(logging_mode == LOGGING_NONE) {
 		printf("%s\n", msg);
 	} else if(logging_mode == LOGGING_SYSLOG) {
-		syslog(LOG_INFO, msg);
+		syslog(LOG_INFO, "%s", msg);
 	}
 }
 

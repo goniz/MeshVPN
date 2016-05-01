@@ -24,6 +24,7 @@
 #include "../include/p2psec.h"
 #include "../include/logging.h"
 #include "peermgt.c"
+#include <unistd.h>
 
 
 P2PSEC_CTX {
@@ -88,24 +89,78 @@ int p2psecGetNodeIDSize() {
 	return nodeid_SIZE;
 }
 
-
-int p2psecLoadPrivkey(P2PSEC_CTX *p2psec, unsigned char *pemdata, const int pemdata_len) {
-	if(p2psec->key_loaded) nodekeyDestroy(&p2psec->nk);
-	
-	if(nodekeyCreate(&p2psec->nk)) {
-		if(nodekeyLoadPrivatePEM(&p2psec->nk, pemdata, pemdata_len)) {
-			p2psec->key_loaded = 1;
-			return 1;
-		}
-		nodekeyDestroy(&p2psec->nk);
-	}
-	p2psec->key_loaded = 0;
-	return 0;
+/**
+ * Initialize node private keys. If there is no file by keypath we will generate keys and export them to file
+ * otherwise we will try to load it.
+ * keypath - should be writable path, might be in chrooted dir, because private keys readed before priveleges revoke
+ */
+int p2psecInitPrivateKey(P2PSEC_CTX *p2psec, const int bits, const char *keypath) {
+    if(strlen(keypath) > 0) {
+        debugf("Initialize  encryption keys, save path is %s", keypath);
+    }
+    
+    if(access(keypath, F_OK) == 0) {
+        debug("PEM file found. Loading it.");
+        if(p2psecImportPrivkey(p2psec, keypath)) {
+            msgf("PEM file successfully loaded: %s", keypath);
+            return 1;
+        }
+        
+        debugf("Failed to import key from %s, will be regenerated", keypath);
+        return 0;
+    }
+    
+    if(!p2psecGeneratePrivkey(p2psec, bits)) {
+        debug("failed to generate private key");
+        return 0;
+    }
+    
+    if(!p2psecExportPrivkey(p2psec, keypath)){
+        debugf("Failed to export private key to %s", keypath);
+        return 0;
+    }
+    
+    return 1;
 }
 
+int p2psecImportPrivkey(P2PSEC_CTX * p2psec, const char * keypath) {
+    if(!nodekeyCreate(&p2psec->nk)) {
+        debug("failed to initialize node key");
+        return 0;
+    }
+    
+    if(!nodekeyImport(&p2psec->nk, keypath)) {
+        debug("PEM key import failed");
+        return 0;
+    }
+    
+    p2psec->key_loaded = 1;
+    return 1;
+}
+/**
+ * Export key to
+ */
+int p2psecExportPrivkey(P2PSEC_CTX * p2psec, const char * keypath) {
+    if(!p2psec->key_loaded) {
+        debug("unable to save key because it's not loaded!");
+        return 0;
+    }
+    
+    if(!nodekeyExport(&p2psec->nk, keypath)) {
+        debug("failed to export RSA key");
+        return 0;
+    }
+    
+    debug("Encryption key successfully exported");
+    return 1;
+}
 
+/**
+ * Generate or load private key from file
+ */
 int p2psecGeneratePrivkey(P2PSEC_CTX *p2psec, const int bits) {
 	if(p2psec->key_loaded) nodekeyDestroy(&p2psec->nk);
+    
 	if(bits >= 1024 && bits <= 3072) {
 		if(nodekeyCreate(&p2psec->nk)) {
 			if(nodekeyGenerate(&p2psec->nk, bits)) {

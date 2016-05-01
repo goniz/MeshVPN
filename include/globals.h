@@ -21,7 +21,6 @@
 #define PEERVPN_VERSION_MAJOR 0
 #define PEERVPN_VERSION_MINOR 44
 
-
 // compile time options & timing parameters
 #define INITPEER_STORAGE 1024
 
@@ -30,6 +29,8 @@
 #define CONFPARSER_LINEBUF_SIZE 4096
 #define CONFPARSER_NAMEBUF_SIZE 512
 
+// encryption options
+#define ENCRYPTION_ASYM
 
 // iogrps
 #define IOGRP_DEFAULT 0

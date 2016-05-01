@@ -69,7 +69,18 @@ static int nodekeyGenerate(struct s_nodekey *nodekey, const int key_size) {
         return 0;
     }
     
-    return rsaGetFingerprint(nodekey->nodeid.id, nodeid_SIZE, &nodekey->key);
+    return rsaGetFingerprint(nodekey->nodeid.id, NODEID_SIZE, &nodekey->key);
+}
+
+/**
+ * Export nodekey to file
+ */
+int nodekeyExport(struct s_nodekey * nodekey, const char * keypath) {
+    return rsaExportKey(&nodekey->key, keypath);
+}
+
+int nodekeyImport(struct s_nodekey * nodekey, const char * keypath) {
+    return rsaImportKey(&nodekey->key, keypath);
 }
 
 
