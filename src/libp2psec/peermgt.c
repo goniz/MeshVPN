@@ -1161,7 +1161,7 @@ static int peermgtInit(struct s_peermgt *mgt) {
 	authmgtReset(&mgt->authmgt);
 	nodedbInit(&mgt->nodedb);
 	nodedbInit(&mgt->relaydb);
-
+    
 	if(peermgtNew(mgt, local_nodeid, &empty_addr) == 0) { // ID 0 should always represent local NodeID
 		if(peermgtGetID(mgt, local_nodeid) == 0) {
 			if(peermgtSetNetID(mgt, defaultpw, 7) && peermgtSetPassword(mgt, defaultpw, 7)) {
@@ -1169,6 +1169,7 @@ static int peermgtInit(struct s_peermgt *mgt) {
 				tnow = utilGetClock();
 				mgt->tinit = tnow;
 				mgt->lastconntry = tnow;
+
 				return 1;
 			}
 		}
@@ -1257,7 +1258,7 @@ static int peermgtCreate(struct s_peermgt *mgt, const int peer_slots, const int 
 	const char *defaultid = "default";
 	struct s_peermgt_data *data_mem;
 	struct s_crypto *ctx_mem;
-
+    
 	if(peer_slots <= 0 || auth_slots <= 0  || !peermgtSetNetID(mgt, defaultid, 7)) {
         debugf("Failed to create PeerMgr, peer_slots: %d, auth_slots: %d", peer_slots, auth_slots);
         return 0;
@@ -1304,10 +1305,12 @@ static int peermgtCreate(struct s_peermgt *mgt, const int peer_slots, const int 
         return 0;
     }
     
+    
     mgt->nodekey = local_nodekey;
     mgt->data = data_mem;
     mgt->ctx = ctx_mem;
     mgt->rrmsg.msg = mgt->rrmsgbuf;
+    
     
     return peermgtInit(mgt);
 }

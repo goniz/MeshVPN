@@ -27,6 +27,7 @@
 #include "netid.c"
 #include "nodeid.c"
 #include "dh.c"
+#include "../include/logging.h"
 
 
 // Auth state definitions.
@@ -621,14 +622,13 @@ static void authReset(struct s_auth_state *authstate) {
 
 // Start new auth session.
 static int authStart(struct s_auth_state *authstate) {
-	if(authstate->state == auth_IDLE) {
-		authstate->state = auth_S0a;
-		authGenMsg(authstate);
-		return 1;
-	}
-	else {
-		return 0;
-	}
+	if(authstate->state != auth_IDLE) {
+        return 0;
+    }
+    
+    authstate->state = auth_S0a;
+    authGenMsg(authstate);
+    return 1;
 }
 
 
@@ -751,17 +751,27 @@ static void authSetLocalData(struct s_auth_state *authstate, const int peerid, c
 
 // Create auth state object.
 static int authCreate(struct s_auth_state *authstate, struct s_netid *netid, struct s_nodekey *local_nodekey, struct s_dh_state *dhstate, const int authid) {
-	utilWriteInt32(authstate->local_authid, authid);
-	if(dhstate == NULL) return 0;
-	if(local_nodekey == NULL) return 0;
-	if(netid == NULL) return 0;
+    debugf("Initializing auth object, ID: %d", authid);
+    utilWriteInt32(authstate->local_authid, authid);
+    if(dhstate == NULL) {
+        debug("wrong DH state");
+        return 0;
+    }
+    
+    if(local_nodekey == NULL) {
+        debug("wrong local Node key");
+        return 0;
+    }
+    
+    if(netid == NULL) return 0;
 	if(!rsaIsValid(&local_nodekey->key)) return 0;
 	if(!rsaIsPrivate(&local_nodekey->key)) return 0;
 	
 	authstate->dhstate = dhstate;
 	authstate->local_nodekey = local_nodekey;
 	authstate->netid = netid;
-	if(nodekeyCreate(&authstate->remote_nodekey)) {
+	
+    if(nodekeyCreate(&authstate->remote_nodekey)) {
 		if(cryptoCreate(authstate->crypto_ctx, auth_CRYPTOCTX_COUNT)) {
 			authReset(authstate);
 			return 1;

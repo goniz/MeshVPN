@@ -80,7 +80,12 @@ int nodekeyExport(struct s_nodekey * nodekey, const char * keypath) {
 }
 
 int nodekeyImport(struct s_nodekey * nodekey, const char * keypath) {
-    return rsaImportKey(&nodekey->key, keypath);
+    if(!rsaImportKey(&nodekey->key, keypath)) {
+        debug("failed to import RSA key");
+        return 0;
+    }
+    
+    return rsaGetFingerprint(nodekey->nodeid.id, NODEID_SIZE, &nodekey->key);
 }
 
 
