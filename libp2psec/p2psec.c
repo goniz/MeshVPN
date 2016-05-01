@@ -55,11 +55,11 @@ int p2psecStart(P2PSEC_CTX *p2psec) {
 	if (!((!p2psec->started) && (p2psec->key_loaded) && (p2psec->dh_loaded))) {
 		return 0;
 	}
-	
+    
 	if(!(peermgtCreate(&p2psec->mgt, p2psec->peer_count, p2psec->auth_count, &p2psec->nk, &p2psec->dh))) {
 		return 0;
 	}
-				
+    
 	peermgtSetLoopback(&p2psec->mgt, p2psec->loopback_enable);
 	peermgtSetFastauth(&p2psec->mgt, p2psec->fastauth_enable);
 	peermgtSetFragmentation(&p2psec->mgt, p2psec->fragmentation_enable);
@@ -107,7 +107,6 @@ int p2psecInitPrivateKey(P2PSEC_CTX *p2psec, const int bits, const char *keypath
         }
         
         debugf("Failed to import key from %s, will be regenerated", keypath);
-        return 0;
     }
     
     if(!p2psecGeneratePrivkey(p2psec, bits)) {
@@ -213,6 +212,8 @@ void p2psecSetNetname(P2PSEC_CTX *p2psec, const char *netname, const int netname
 		memcpy(p2psec->netname, "default", 7);
 		p2psec->netname_len = 7;
 	}
+    
+    debugf("Network name update to %s", p2psec->netname);
 	if(p2psec->started) peermgtSetNetID(&p2psec->mgt, p2psec->netname, p2psec->netname_len);
 }
 
