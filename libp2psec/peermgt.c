@@ -1299,7 +1299,7 @@ static int peermgtCreate(struct s_peermgt *mgt, const int peer_slots, const int 
         return 0;
     }
     
-    if(!mapCreate(&mgt->map, (peer_slots + 1), nodeid_SIZE, 1)) {
+    if(!mapCreate(&mgt->map, (peer_slots + 1), NODEID_SIZE, 1)) {
         debug("failed to create map");
         return 0;
     }

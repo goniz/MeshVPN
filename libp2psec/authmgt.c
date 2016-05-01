@@ -363,6 +363,7 @@ static int authmgtCreate(struct s_authmgt *mgt, struct s_netid *netid, const int
 	struct s_peeraddr *peeraddr_mem;
 	int *lastsend_mem;
 	int *lastrecv_mem;
+    
 	if(auth_slots <= 0) {
         debug("No auth slots available");
         return 0;

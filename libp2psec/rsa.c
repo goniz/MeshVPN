@@ -20,13 +20,16 @@
 #ifndef F_RSA_C
 #define F_RSA_C
 
+#include <stdio.h>
+#include <stdlib.h>
 
+#include "../include/logging.h"
 #include "crypto.c"
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/bn.h>
-
+#include <openssl/bio.h>
 
 // Minimum size of DER encoded RSA public key in bytes.
 #define rsa_MINSIZE 48
@@ -92,7 +95,7 @@ static int rsaGetDER(unsigned char *buf, const int buf_size, const struct s_rsa 
 
 
 // Get SHA-256 fingerprint of public key
-static int rsaGetFingerprint(unsigned char *buf, const int buf_size, const struct s_rsa *rsa) {
+int rsaGetFingerprint(unsigned char *buf, const int buf_size, const struct s_rsa *rsa) {
 	unsigned char derbuf[rsa_MAXSIZE];
 	int dersize = rsaGetDER(derbuf, rsa_MAXSIZE, rsa);
 	if(dersize > 0) {
@@ -103,30 +106,102 @@ static int rsaGetFingerprint(unsigned char *buf, const int buf_size, const struc
 	}
 }
 
-
-// Generate RSA public/private key pair
+/**
+ * Loading private key from PEM encoded file
+ * keypath should be accessable
+ */
+int rsaImportKey(struct s_rsa * rsa, const char *keypath) {
+    OpenSSL_add_all_algorithms();
+    
+    BIO * in;
+    RSA * rsakey;
+    
+    rsa->key = EVP_PKEY_new();
+    in = BIO_new_file(keypath, "r");
+    if(in == NULL ) {
+        debugf("failed to load private key from %s, is file accessable?", keypath);
+        return 0;
+    }
+    
+    PEM_read_bio_PrivateKey(in, &rsa->key, 0, NULL);
+    
+    BIO_free(in);
+    rsakey = EVP_PKEY_get1_RSA(rsa->key);
+    
+    if(RSA_check_key(rsakey) != 1) {
+        debug("wrong status of loaded key, probably invalid");
+        return 0;
+    }
+    
+    debugf("PKEY type is %d", EVP_PKEY_id(rsa->key));
+    PEM_write_PrivateKey(stdout,rsa->key,NULL,NULL,0,0,NULL);
+    
+    debugf("Private key successfully loaded from %s", keypath);
+    rsa->isvalid = 1;
+    rsa->isprivate = 1;
+    
+    return 1;
+}
+/**
+ * Generate RSA key pair
+ * @NOTE: we don't cleanup anything because in case of failure we are going to exit
+ */
 static int rsaGenerate(struct s_rsa *rsa, const int key_size) {
-	RSA *rsakey;
+    debug("Generating RSA private/public key pair");
+    
+	RSA * rsakey;
 	rsa->isvalid = 0;
-	if(key_size > 0) {
-		rsakey = RSA_new();
-		if(rsakey != NULL) {
-			if(BN_set_word(rsa->bn, RSA_F4)) {
-				if(RSA_generate_key_ex(rsakey, key_size, rsa->bn, NULL)) {
-					if(RSA_check_key(rsakey) == 1) {
-						if(EVP_PKEY_assign_RSA(rsa->key, rsakey)) {
-							rsa->isvalid = 1;
-							rsa->isprivate = 1;
-							return 1;
-						}
-					}
-				}
-				BN_zero(rsa->bn);
-			}
-			RSA_free(rsakey);
-		}
-	}
-	return 0;
+	if(key_size <= 0) {
+        debug("wrong RSA key size specified");
+        return 0;
+    }
+    
+    rsakey = RSA_new();
+    if(rsakey == NULL) {
+        debug("failed to generate RSA key");
+        return 0;
+    }
+    
+    if(!BN_set_word(rsa->bn, RSA_F4)) {
+        debug("failed to initialize RSA");
+        return 0;
+    }
+    
+    if(!RSA_generate_key_ex(rsakey, key_size, rsa->bn, NULL)) {
+        debug("failed to generate RSA key");
+        return 0;
+    }
+    
+    if(RSA_check_key(rsakey) != 1) {
+        debug("generated RSA key verification failed");
+        return 0;
+    }
+    
+    if(!EVP_PKEY_assign_RSA(rsa->key, rsakey)) {
+        debug("failed to save RSA key");
+        return 0;
+    }
+    
+    rsa->isvalid = 1;
+    rsa->isprivate = 1;
+    
+    return 1;
+}
+
+/**
+ * Export our private key file to PEM format
+ */
+int rsaExportKey(struct s_rsa * rsa, const char * keypath) {
+    BIO * out = BIO_new_file(keypath, "w");
+    
+    if(!PEM_write_bio_PrivateKey(out, rsa->key, NULL, NULL, 0, NULL, NULL)) {
+        debugf("BIO:failed to write %s", keypath);
+        return 0;
+    }
+    BIO_free(out);
+    
+    debugf("Exported RSA to %s", keypath);
+    return 1;
 }
 
 
@@ -260,19 +335,22 @@ static void rsaReset(struct s_rsa *rsa) {
 // Create a RSA object.
 static int rsaCreate(struct s_rsa *rsa) {
 	rsa->bn = BN_new();
-	if(rsa->bn != NULL) {
-		BN_zero(rsa->bn);
-		rsa->key = EVP_PKEY_new();
-		if(rsa->key != NULL) {
-			rsa->md = EVP_MD_CTX_create();
-			if(rsa->md != NULL) {
-				rsaReset(rsa);
-				return 1;
-			}
-			EVP_PKEY_free(rsa->key);
-		}
-		BN_free(rsa->bn);
-	}
+	if(rsa->bn == NULL) {
+        debug("failed to set rsa->bn");
+        BN_free(rsa->bn);
+        return 0;
+    }
+    
+    BN_zero(rsa->bn);
+    rsa->key = EVP_PKEY_new();
+    if(rsa->key != NULL) {
+        rsa->md = EVP_MD_CTX_create();
+        if(rsa->md != NULL) {
+            rsaReset(rsa);
+            return 1;
+        }
+        EVP_PKEY_free(rsa->key);
+    }
 	return 0;
 }
 

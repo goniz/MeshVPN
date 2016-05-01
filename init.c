@@ -16,6 +16,7 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 #include "include/logging.h"
+#include <string.h>
 
 // handle termination signals
 void sighandler(int sig) {
@@ -235,12 +236,14 @@ void init(struct s_initconfig *initconfig) {
 	msg("Initializing P2P core");	
 	g_p2psec = p2psecCreate();
 	if(!p2psecLoadDefaults(g_p2psec)) throwError("Failed to load defaults!");
-	if(!p2psecGeneratePrivkey(g_p2psec, 1024)) throwError("Failed to generate private key!");
+    
+	if(!p2psecInitPrivateKey(g_p2psec, 1024, initconfig->privatekey)) throwError("Failed to generate private key!");
 	
-        p2psecSetNetname(g_p2psec, initconfig->networkname, strlen(initconfig->networkname));
+    p2psecSetNetname(g_p2psec, initconfig->networkname, strlen(initconfig->networkname));
 	p2psecSetPassword(g_p2psec, initconfig->password, initconfig->password_len);
 	p2psecEnableFragmentation(g_p2psec);
-	if(g_enableeth > 0) {
+    
+    if(g_enableeth > 0) {
 		p2psecEnableUserdata(g_p2psec);
 	}
 	else {
@@ -269,7 +272,7 @@ void init(struct s_initconfig *initconfig) {
 	signal(SIGTERM, sighandler);
 
 	// show client & network id
-	utilByteArrayToHexstring(str, 256, mapGetKeyByID(&g_p2psec->mgt.map, 0), p2psecGetNodeIDSize());
+	utilByteArrayToHexstring(str, 256, mapGetKeyByID(&g_p2psec->mgt.map, 0), NODEID_SIZE);
 	msgf("Client ID: %s", str);
 	
 	utilByteArrayToHexstring(str, 256, g_p2psec->mgt.netid.id, netid_SIZE);
@@ -293,8 +296,8 @@ void init(struct s_initconfig *initconfig) {
 
 	// enter main loop
 	msg("Initialization finished, starting main loop");
-        mainLoop();
-        msg("Mainloop finished, closing down");
+    mainLoop();
+    msg("Mainloop finished, closing down");
 
 	// shut down
 	virtservDestroy(&g_virtserv);
