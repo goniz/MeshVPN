@@ -20,8 +20,9 @@
 #ifndef F_CRYPTO_C
 #define F_CRYPTO_C
 
+#include "../../include/crypto.h"
+#include "../../include/util.h"
 
-#include "util.c"
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
@@ -32,62 +33,29 @@
 #include <string.h>
 
 
-// supported crypto algorithms
-#define crypto_AES256 1
-
-
-// supported hmac algorithms
-#define crypto_SHA256 1
-
-
-// maximum iv & hmac size
-#define crypto_MAXIVSIZE EVP_MAX_IV_LENGTH
-#define crypto_MAXHMACSIZE EVP_MAX_MD_SIZE
-
-
-// cipher context storage
-struct s_crypto {
-	EVP_CIPHER_CTX enc_ctx;
-	EVP_CIPHER_CTX dec_ctx;
-	HMAC_CTX hmac_ctx;
-};
-
-
-// cipher pointer storage
-struct s_crypto_cipher {
-	const EVP_CIPHER *cipher;
-};
-
-
-// md pointer storage
-struct s_crypto_md {
-	const EVP_MD *md;
-};
-
-
 // return EVP cipher key size
-static int cryptoGetEVPCipherSize(struct s_crypto_cipher *st_cipher) {
+int cryptoGetEVPCipherSize(struct s_crypto_cipher *st_cipher) {
 	return EVP_CIPHER_key_length(st_cipher->cipher);
 }
 
 
 // return EVP cipher
-static struct s_crypto_cipher cryptoGetEVPCipher(const EVP_CIPHER *cipher) {
+struct s_crypto_cipher cryptoGetEVPCipher(const EVP_CIPHER *cipher) {
 	struct s_crypto_cipher ret = { .cipher = cipher };
 	return ret;
 }
 
 
 // return EVP md
-static struct s_crypto_md cryptoGetEVPMD(const EVP_MD *md) {
+struct s_crypto_md cryptoGetEVPMD(const EVP_MD *md) {
 	struct s_crypto_md ret = { .md = md };
 	return ret;
 }
 
 
 // initialize random number generator
-int cryptoRandFD = -1;
-static int cryptoRandInit() {
+cryptoRandFD = -1;
+int cryptoRandInit() {
 	int fd;
 	unsigned char randbuf[64];
 	if(!(cryptoRandFD < 0)) { return 1; }
@@ -115,7 +83,7 @@ static int cryptoRandInit() {
 
 
 // generate random bytes
-static int cryptoRand(unsigned char *buf, const int buf_size) {
+int cryptoRand(unsigned char *buf, const int buf_size) {
 	int len;
 	unsigned char randbuf[64];
 	len = 0;
@@ -142,7 +110,7 @@ static int cryptoRand(unsigned char *buf, const int buf_size) {
 
 
 // generate random int64 number
-static int64_t cryptoRand64() {
+int64_t cryptoRand64() {
 	int64_t n;
 	unsigned char *buf = (unsigned char *)&n;
 	int len = sizeof(int64_t);
@@ -152,7 +120,7 @@ static int64_t cryptoRand64() {
 
 
 // generate random int number
-static int cryptoRandInt() {
+int cryptoRandInt() {
 	int n;
 	n = cryptoRand64();
 	return n;
@@ -160,7 +128,7 @@ static int cryptoRandInt() {
 
 
 // generate keys
-static int cryptoSetKeys(struct s_crypto *ctxs, const int count, const unsigned char *secret_buf, const int secret_len, const unsigned char *nonce_buf, const int nonce_len) {
+int cryptoSetKeys(struct s_crypto *ctxs, const int count, const unsigned char *secret_buf, const int secret_len, const unsigned char *nonce_buf, const int nonce_len) {
 	int cur_key_len;
 	unsigned char cur_key[EVP_MAX_MD_SIZE];
 	int seed_key_len;
@@ -227,7 +195,7 @@ static int cryptoSetKeys(struct s_crypto *ctxs, const int count, const unsigned 
 
 
 // generate random keys
-static int cryptoSetKeysRandom(struct s_crypto *ctxs, const int count) {
+int cryptoSetKeysRandom(struct s_crypto *ctxs, const int count) {
 	unsigned char buf_a[256];
 	unsigned char buf_b[256];
 	cryptoRand(buf_a, 256);
@@ -237,7 +205,7 @@ static int cryptoSetKeysRandom(struct s_crypto *ctxs, const int count) {
 
 
 // destroy cipher contexts
-static void cryptoDestroy(struct s_crypto *ctxs, const int count) {
+void cryptoDestroy(struct s_crypto *ctxs, const int count) {
 	int i;
 	cryptoSetKeysRandom(ctxs, count);
 	for(i=0; i<count; i++) {
@@ -249,7 +217,7 @@ static void cryptoDestroy(struct s_crypto *ctxs, const int count) {
 
 
 // create cipher contexts
-static int cryptoCreate(struct s_crypto *ctxs, const int count) {
+int cryptoCreate(struct s_crypto *ctxs, const int count) {
 	int i;
 	for(i=0; i<count; i++) {
 		EVP_CIPHER_CTX_init(&ctxs[i].enc_ctx);
@@ -267,7 +235,7 @@ static int cryptoCreate(struct s_crypto *ctxs, const int count) {
 
 
 // generate HMAC tag
-static int cryptoHMAC(struct s_crypto *ctx, unsigned char *hmac_buf, const int hmac_len, const unsigned char *in_buf, const int in_len) {
+int cryptoHMAC(struct s_crypto *ctx, unsigned char *hmac_buf, const int hmac_len, const unsigned char *in_buf, const int in_len) {
 	unsigned char hmac[EVP_MAX_MD_SIZE];
 	int len;
 	HMAC_Init_ex(&ctx->hmac_ctx, NULL, -1, NULL, NULL);
@@ -280,7 +248,7 @@ static int cryptoHMAC(struct s_crypto *ctx, unsigned char *hmac_buf, const int h
 
 
 // generate session keys
-static int cryptoSetSessionKeys(struct s_crypto *session_ctx, struct s_crypto *cipher_keygen_ctx, struct s_crypto *md_keygen_ctx, const unsigned char *nonce, const int nonce_len, const int cipher_algorithm, const int hmac_algorithm) {
+int cryptoSetSessionKeys(struct s_crypto *session_ctx, struct s_crypto *cipher_keygen_ctx, struct s_crypto *md_keygen_ctx, const unsigned char *nonce, const int nonce_len, const int cipher_algorithm, const int hmac_algorithm) {
 	struct s_crypto_cipher st_cipher;
 	struct s_crypto_md st_md;
 	
@@ -311,7 +279,7 @@ static int cryptoSetSessionKeys(struct s_crypto *session_ctx, struct s_crypto *c
 
 
 // encrypt buffer
-static int cryptoEnc(struct s_crypto *ctx, unsigned char *enc_buf, const int enc_len, const unsigned char *dec_buf, const int dec_len, const int hmac_len, const int iv_len) {
+int cryptoEnc(struct s_crypto *ctx, unsigned char *enc_buf, const int enc_len, const unsigned char *dec_buf, const int dec_len, const int hmac_len, const int iv_len) {
 	if(!((enc_len > 0) && (dec_len > 0) && (dec_len < enc_len) && (hmac_len > 0) && (hmac_len <= crypto_MAXHMACSIZE) && (iv_len > 0) && (iv_len <= crypto_MAXIVSIZE))) { return 0; }
 
 	unsigned char iv[crypto_MAXIVSIZE];
@@ -340,7 +308,7 @@ static int cryptoEnc(struct s_crypto *ctx, unsigned char *enc_buf, const int enc
 
 
 // decrypt buffer
-static int cryptoDec(struct s_crypto *ctx, unsigned char *dec_buf, const int dec_len, const unsigned char *enc_buf, const int enc_len, const int hmac_len, const int iv_len) {
+int cryptoDec(struct s_crypto *ctx, unsigned char *dec_buf, const int dec_len, const unsigned char *enc_buf, const int enc_len, const int hmac_len, const int iv_len) {
 	if(!((enc_len > 0) && (dec_len > 0) && (enc_len < dec_len) && (hmac_len > 0) && (hmac_len <= crypto_MAXHMACSIZE) && (iv_len > 0) && (iv_len <= crypto_MAXIVSIZE))) { return 0; }
 
 	unsigned char iv[crypto_MAXIVSIZE];
@@ -368,7 +336,7 @@ static int cryptoDec(struct s_crypto *ctx, unsigned char *dec_buf, const int dec
 
 
 // calculate hash
-static int cryptoCalculateHash(unsigned char *hash_buf, const int hash_len, const unsigned char *in_buf, const int in_len, const EVP_MD *hash_func) {
+int cryptoCalculateHash(unsigned char *hash_buf, const int hash_len, const unsigned char *in_buf, const int in_len, const EVP_MD *hash_func) {
 	unsigned char hash[EVP_MAX_MD_SIZE];
 	int len;
 	EVP_MD_CTX *ctx;
@@ -384,19 +352,19 @@ static int cryptoCalculateHash(unsigned char *hash_buf, const int hash_len, cons
 
 
 // calculate SHA-256 hash
-static int cryptoCalculateSHA256(unsigned char *hash_buf, const int hash_len, const unsigned char *in_buf, const int in_len) {
+int cryptoCalculateSHA256(unsigned char *hash_buf, const int hash_len, const unsigned char *in_buf, const int in_len) {
 	return cryptoCalculateHash(hash_buf, hash_len, in_buf, in_len, EVP_sha256());
 }
 
 
 // calculate SHA-512 hash
-static int cryptoCalculateSHA512(unsigned char *hash_buf, const int hash_len, const unsigned char *in_buf, const int in_len) {
+int cryptoCalculateSHA512(unsigned char *hash_buf, const int hash_len, const unsigned char *in_buf, const int in_len) {
 	return cryptoCalculateHash(hash_buf, hash_len, in_buf, in_len, EVP_sha512());
 }
 
 
 // generate session keys from password
-static int cryptoSetSessionKeysFromPassword(struct s_crypto *session_ctx, const unsigned char *password, const int password_len, const int cipher_algorithm, const int hmac_algorithm) {
+int cryptoSetSessionKeysFromPassword(struct s_crypto *session_ctx, const unsigned char *password, const int password_len, const int cipher_algorithm, const int hmac_algorithm) {
 	unsigned char key_a[64];
 	unsigned char key_b[64];
 	struct s_crypto ctx[2];

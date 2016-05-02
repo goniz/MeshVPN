@@ -17,8 +17,8 @@
  ***************************************************************************/
 
 
-#ifndef F_P2PSEC_H
-#define F_P2PSEC_H
+#ifndef H_P2PSEC
+#define H_P2PSEC
 
 
 #define P2PSEC_CTX struct s_p2psec

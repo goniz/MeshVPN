@@ -21,7 +21,7 @@
 #define F_PACKET_C
 
 
-#include "crypto.c"
+#include "../include/crypto.h"
 #include "seq.c"
 #include "util.c"
 

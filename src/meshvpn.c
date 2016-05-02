@@ -31,6 +31,7 @@
 #include "platform/ifconfig.c"
 #include "platform/seccomp.c"
 #include "include/globals.h"
+#include "include/rsa.h"
 #include "console.ic"
 #include "mainloop.c"
 #include "config.c"

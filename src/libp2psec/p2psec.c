@@ -23,6 +23,8 @@
 
 #include "../include/p2psec.h"
 #include "../include/logging.h"
+#include "../include/rsa.h"
+
 #include "peermgt.c"
 #include <unistd.h>
 

@@ -21,7 +21,7 @@
 #define F_DH_C
 
 
-#include "crypto.c"
+#include "../include/crypto.h"
 #include <openssl/dh.h>
 #include <openssl/pem.h>
 #include <openssl/bn.h>
