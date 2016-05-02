@@ -17,27 +17,45 @@
  ***************************************************************************/
 
 
-#ifndef F_NETID_C
-#define F_NETID_C
+#ifndef H_UTIL
+#define H_UTIL
+
+#include <string.h>
+#include <stdint.h>
+#include <time.h>
 
 
-#include "../include/crypto.h"
+// Convert a 4 bit number to a hexchar.
+char util4BitToHexchar(const int n);
 
+// Convert a byte array to a hexstring.
+int utilByteArrayToHexstring(char *str, const int strlen, const unsigned char *arr, const int arrlen);
 
-// NetID size in bytes.
-#define netid_SIZE 32
+// Convert a string to uppercase and change all non-alphanumeric characters to '_'.
+void utilStringFilter(char *strout, const char *strin, const int strlen);
 
+// Determine endianness
+int utilIsLittleEndian();
 
-// The NetID structure.
-struct s_netid {
-	unsigned char id[netid_SIZE];
-};
+// Read 16 bit integer
+int16_t utilReadInt16(const unsigned char *buf);
 
+// Write 16 bit integer
+void utilWriteInt16(unsigned char *buf, int16_t i);
 
-static int netidSet(struct s_netid *netid, const char *netname, const int netname_len) {
-	memset(netid->id, 0, netid_SIZE);
-	return cryptoCalculateSHA256(netid->id, netid_SIZE, (unsigned char *)netname, netname_len);
-}
+// Read 32 bit integer
+int32_t utilReadInt32(const unsigned char *buf);
 
+// Write 32 bit integer
+void utilWriteInt32(unsigned char *buf, int32_t i);
 
-#endif // F_NETID_C
+// Read 64 bit integer
+int64_t utilReadInt64(const unsigned char *buf);
+
+// Write 64 bit integer
+void utilWriteInt64(unsigned char *buf, int64_t i);
+
+// Get clock value in seconds
+int utilGetClock();
+
+#endif // H_UTIL

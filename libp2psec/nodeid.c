@@ -19,9 +19,7 @@
 
 #ifndef F_NODEID_C
 #define F_NODEID_C
-
-
-#include "rsa.c"
+#include "../include/rsa.h"
 
 #define NODEID_SIZE 32
 
@@ -30,8 +28,8 @@
 
 
 // Maximum and minumum sizes of DER encoded NodeKey in bytes.
-#define nodekey_MINSIZE rsa_MINSIZE
-#define nodekey_MAXSIZE rsa_MAXSIZE
+#define nodekey_MINSIZE RSA_MINSIZE
+#define nodekey_MAXSIZE RSA_MAXSIZE
 
 
 // The nodeid structure.
@@ -95,14 +93,14 @@ static int nodekeyLoadDER(struct s_nodekey *nodekey, const unsigned char *pubkey
         return 0;
     }
     
-    return rsaGetFingerprint(nodekey->nodeid.id, nodeid_SIZE, &nodekey->key);
+    return rsaGetFingerprint(nodekey->nodeid.id, NODEID_SIZE, &nodekey->key);
 }
 
 
 // Load NodeKey from PEM encoded public key.
 static int nodekeyLoadPEM(struct s_nodekey *nodekey, unsigned char *pubkey, const int pubkey_size) {
 	if(rsaLoadPEM(&nodekey->key, pubkey, pubkey_size)) {
-		return rsaGetFingerprint(nodekey->nodeid.id, nodeid_SIZE, &nodekey->key);
+		return rsaGetFingerprint(nodekey->nodeid.id, NODEID_SIZE, &nodekey->key);
 	}
 	else {
 		return 0;

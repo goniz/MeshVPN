@@ -23,46 +23,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../include/logging.h"
-#include "crypto.c"
+#include "../../include/logging.h"
+#include "../../include/rsa.h"
+#include "../../include/crypto.h"
+
+#include <openssl/rand.h>
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/bn.h>
 #include <openssl/bio.h>
 
-// Minimum size of DER encoded RSA public key in bytes.
-#define rsa_MINSIZE 48
-
-
-// Maximum size of DER encoded RSA public key in bytes.
-#define rsa_MAXSIZE 416
-
-
-// The RSA structure.
-struct s_rsa {
-	int isvalid;
-	int isprivate;
-	EVP_PKEY *key;
-	EVP_MD_CTX *md;
-	BIGNUM *bn;
-};
-
-
 // Returns 1 if RSA structure contains a valid public key
-static int rsaIsValid(const struct s_rsa *rsa) {
+int rsaIsValid(const struct s_rsa *rsa) {
 	return rsa->isvalid;
 }
 
 
 // Returns 1 if RSA structure contains a private key
-static int rsaIsPrivate(const struct s_rsa *rsa) {
+int rsaIsPrivate(const struct s_rsa *rsa) {
 	return rsa->isprivate;
 }
 
 
 // Get size of DER encoded public key.
-static int rsaGetDERSize(const struct s_rsa *rsa) {
+int rsaGetDERSize(const struct s_rsa *rsa) {
 	int len = i2d_PublicKey(rsa->key, NULL);
 	if(len > 0) {
 		return len;
@@ -74,12 +59,12 @@ static int rsaGetDERSize(const struct s_rsa *rsa) {
 
 
 // Get DER encoded public key. Returns length if successful.
-static int rsaGetDER(unsigned char *buf, const int buf_size, const struct s_rsa *rsa) {
+int rsaGetDER(unsigned char *buf, const int buf_size, const struct s_rsa *rsa) {
 	unsigned char *i2dbuf;
 	int len;
 	int ptlen = rsaGetDERSize(rsa);
 	i2dbuf = buf;
-	if((ptlen > rsa_MINSIZE) && (ptlen < buf_size)) {
+	if((ptlen > RSA_MINSIZE) && (ptlen < buf_size)) {
 		len = i2d_PublicKey(rsa->key, &i2dbuf);
 		if(len > 0) {
 			return len;
@@ -96,8 +81,8 @@ static int rsaGetDER(unsigned char *buf, const int buf_size, const struct s_rsa 
 
 // Get SHA-256 fingerprint of public key
 int rsaGetFingerprint(unsigned char *buf, const int buf_size, const struct s_rsa *rsa) {
-	unsigned char derbuf[rsa_MAXSIZE];
-	int dersize = rsaGetDER(derbuf, rsa_MAXSIZE, rsa);
+	unsigned char derbuf[RSA_MAXSIZE];
+	int dersize = rsaGetDER(derbuf, RSA_MAXSIZE, rsa);
 	if(dersize > 0) {
 		return cryptoCalculateSHA256(buf, buf_size, derbuf, dersize);
 	}
@@ -146,7 +131,7 @@ int rsaImportKey(struct s_rsa * rsa, const char *keypath) {
  * Generate RSA key pair
  * @NOTE: we don't cleanup anything because in case of failure we are going to exit
  */
-static int rsaGenerate(struct s_rsa *rsa, const int key_size) {
+int rsaGenerate(struct s_rsa *rsa, const int key_size) {
     debug("Generating RSA private/public key pair");
     
 	RSA * rsakey;
@@ -206,11 +191,11 @@ int rsaExportKey(struct s_rsa * rsa, const char * keypath) {
 
 
 // Load DER encoded public key.
-static int rsaLoadDER(struct s_rsa *rsa, const unsigned char *pubkey, const int pubkey_size) {
+int rsaLoadDER(struct s_rsa *rsa, const unsigned char *pubkey, const int pubkey_size) {
 	EVP_PKEY *d2ipkey;
 	const unsigned char *d2ikey;
 	rsa->isvalid = 0;
-	if((pubkey_size > rsa_MINSIZE) && (pubkey != NULL)) {
+	if((pubkey_size > RSA_MINSIZE) && (pubkey != NULL)) {
 		d2ikey = pubkey;
 		d2ipkey = rsa->key;
 		if(d2i_PublicKey(EVP_PKEY_RSA, &d2ipkey, &d2ikey, pubkey_size) != NULL) {
@@ -229,7 +214,7 @@ static int rsaLoadDER(struct s_rsa *rsa, const unsigned char *pubkey, const int 
 
 
 // Load PEM encoded public key.
-static int rsaLoadPEM(struct s_rsa *rsa, unsigned char *pubkey, const int pubkey_size) {
+int rsaLoadPEM(struct s_rsa *rsa, unsigned char *pubkey, const int pubkey_size) {
 	BIO *biopub;
 	RSA *rsakey;
 	int ret;
@@ -261,7 +246,7 @@ static int rsaLoadPEM(struct s_rsa *rsa, unsigned char *pubkey, const int pubkey
 
 
 // Load PEM encoded private key.
-static int rsaLoadPrivatePEM(struct s_rsa *rsa, unsigned char *privkey, const int privkey_size) {
+int rsaLoadPrivatePEM(struct s_rsa *rsa, unsigned char *privkey, const int privkey_size) {
 	BIO *biopriv;
 	RSA *rsakey;
 	int ret;
@@ -298,13 +283,13 @@ static int rsaLoadPrivatePEM(struct s_rsa *rsa, unsigned char *privkey, const in
 
 
 // Return maximum size of a signature.
-static int rsaSignSize(const struct s_rsa *rsa) {
+int rsaSignSize(const struct s_rsa *rsa) {
 	return EVP_PKEY_size(rsa->key);
 }
 
 
 // Generate signature. Returns length of signature if successful.
-static int rsaSign(struct s_rsa *rsa, unsigned char *sign_buf, const int sign_len, const unsigned char *in_buf, const int in_len) {
+int rsaSign(struct s_rsa *rsa, unsigned char *sign_buf, const int sign_len, const unsigned char *in_buf, const int in_len) {
 	int sign_maxlen = rsaSignSize(rsa);
 	int len;
 	if(sign_len < sign_maxlen) return 0;
@@ -317,7 +302,7 @@ static int rsaSign(struct s_rsa *rsa, unsigned char *sign_buf, const int sign_le
 
 
 // Verify signature. Returns 1 if successful.
-static int rsaVerify(struct s_rsa *rsa, const unsigned char *sign_buf, const int sign_len, const unsigned char *in_buf, const int in_len) {
+int rsaVerify(struct s_rsa *rsa, const unsigned char *sign_buf, const int sign_len, const unsigned char *in_buf, const int in_len) {
 	if(!EVP_VerifyInit_ex(rsa->md, EVP_sha256(), NULL)) return 0;
 	if(!EVP_VerifyUpdate(rsa->md, in_buf, in_len)) return 0;
 	if(!EVP_VerifyFinal(rsa->md, sign_buf, sign_len, rsa->key)) return 0;
@@ -326,14 +311,14 @@ static int rsaVerify(struct s_rsa *rsa, const unsigned char *sign_buf, const int
 
 
 // Reset a RSA object.
-static void rsaReset(struct s_rsa *rsa) {
+void rsaReset(struct s_rsa *rsa) {
 	rsa->isvalid = 0;
 	rsa->isprivate = 0;
 }
 
 
 // Create a RSA object.
-static int rsaCreate(struct s_rsa *rsa) {
+int rsaCreate(struct s_rsa *rsa) {
 	rsa->bn = BN_new();
 	if(rsa->bn == NULL) {
         debug("failed to set rsa->bn");
@@ -356,7 +341,7 @@ static int rsaCreate(struct s_rsa *rsa) {
 
 
 // Destroy a RSA object.
-static void rsaDestroy(struct s_rsa *rsa) {
+void rsaDestroy(struct s_rsa *rsa) {
 	rsaReset(rsa);
 	EVP_MD_CTX_destroy(rsa->md);
 	EVP_PKEY_free(rsa->key);

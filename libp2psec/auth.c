@@ -20,7 +20,6 @@
 #ifndef F_AUTH_C
 #define F_AUTH_C
 
-
 #include "msg.c"
 #include "util.c"
 #include "seq.c"
@@ -28,7 +27,7 @@
 #include "nodeid.c"
 #include "dh.c"
 #include "../include/logging.h"
-
+#include "../include/rsa.h"
 
 // Auth state definitions.
 #define auth_IDLE 0
@@ -763,8 +762,16 @@ static int authCreate(struct s_auth_state *authstate, struct s_netid *netid, str
         return 0;
     }
     
-    if(netid == NULL) return 0;
-	if(!rsaIsValid(&local_nodekey->key)) return 0;
+    if(netid == NULL) {
+        debug("wrong network ID");
+        return 0;
+    }
+    
+    if(!rsaIsValid(&local_nodekey->key)) {
+        debug("local RSA key is invalid");
+        return 0;
+    }
+    
 	if(!rsaIsPrivate(&local_nodekey->key)) return 0;
 	
 	authstate->dhstate = dhstate;

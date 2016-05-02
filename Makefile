@@ -1,11 +1,11 @@
-CFLAGS+=-O2 -DSECCOMP_ENABLE -g
-LIBS+=-lcrypto -lz -lseccomp 
+CFLAGS+=-O2 -DDEBUG -g
+LIBS+=-lcrypto -lz
 DESTDIR="/usr/local"
 COMMIT=$(shell git log --format='%H' | head -n 1)
 
 all: peervpn
-peervpn: peervpn.o logging.o
-	$(CC) $(LDFLAGS) peervpn.o logging.o $(LIBS) -o $@
+peervpn: src/encryption/rsa.o src/encryption/crypto.o peervpn.o logging.o
+	$(CC) $(LDFLAGS) peervpn.o logging.o src/encryption/rsa.o src/encryption/crypto.o $(LIBS) -o $@
 
 peervpn.o: peervpn.c
 logging.o: logging.c
@@ -24,4 +24,4 @@ install:
 	mkdir -p $(DESTDIR)/sbin
 	install peervpn $(DESTDIR)/sbin/peervpn
 clean:
-	rm -f peervpn peervpn.o logging.o
+	rm -f peervpn peervpn.o logging.o src/encryption/*.o

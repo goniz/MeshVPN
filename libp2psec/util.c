@@ -27,7 +27,7 @@
 
 
 // Convert a 4 bit number to a hexchar.
-static char util4BitToHexchar(const int n) {
+char util4BitToHexchar(const int n) {
 	if(n < 10) return ('0' + n);
 	if(n < 16) return ('A' - 10 + n);
 	return ('\0');
@@ -35,7 +35,7 @@ static char util4BitToHexchar(const int n) {
 
 
 // Convert a byte array to a hexstring.
-static int utilByteArrayToHexstring(char *str, const int strlen, const unsigned char *arr, const int arrlen) {
+int utilByteArrayToHexstring(char *str, const int strlen, const unsigned char *arr, const int arrlen) {
 	int l, r, p, i;
 	if(!((arrlen * 2) < strlen)) return 0;
 	p = 0;
@@ -51,7 +51,7 @@ static int utilByteArrayToHexstring(char *str, const int strlen, const unsigned 
 
 
 // Convert a string to uppercase and change all non-alphanumeric characters to '_'.
-static void utilStringFilter(char *strout, const char *strin, const int strlen) {
+void utilStringFilter(char *strout, const char *strin, const int strlen) {
 	int i, c;
 	i = 0;
 	while(i < strlen) {
@@ -75,7 +75,7 @@ static void utilStringFilter(char *strout, const char *strin, const int strlen) 
 
 
 // Determine endianness
-static int utilIsLittleEndian() {
+int utilIsLittleEndian() {
 	const unsigned char s[4] = { 1, 0, 0, 0 };
 	const int32_t *n = (int32_t *)&s;
 	return (*n == 1);
@@ -83,7 +83,7 @@ static int utilIsLittleEndian() {
 
 
 // Read 16 bit integer
-static int16_t utilReadInt16(const unsigned char *buf) {
+int16_t utilReadInt16(const unsigned char *buf) {
 	int16_t i;
 	if(utilIsLittleEndian()) {
 		((unsigned char *)&i)[0] = buf[1];
@@ -98,7 +98,7 @@ static int16_t utilReadInt16(const unsigned char *buf) {
 
 
 // Write 16 bit integer
-static void utilWriteInt16(unsigned char *buf, int16_t i) {
+void utilWriteInt16(unsigned char *buf, int16_t i) {
 	if(utilIsLittleEndian()) {
 		buf[0] = ((unsigned char *)&i)[1];
 		buf[1] = ((unsigned char *)&i)[0];
@@ -110,7 +110,7 @@ static void utilWriteInt16(unsigned char *buf, int16_t i) {
 
 
 // Read 32 bit integer
-static int32_t utilReadInt32(const unsigned char *buf) {
+int32_t utilReadInt32(const unsigned char *buf) {
 	int32_t i;
 	if(utilIsLittleEndian()) {
 		((unsigned char *)&i)[0] = buf[3];
@@ -127,7 +127,7 @@ static int32_t utilReadInt32(const unsigned char *buf) {
 
 
 // Write 32 bit integer
-static void utilWriteInt32(unsigned char *buf, int32_t i) {
+void utilWriteInt32(unsigned char *buf, int32_t i) {
 	if(utilIsLittleEndian()) {
 		buf[0] = ((unsigned char *)&i)[3];
 		buf[1] = ((unsigned char *)&i)[2];
@@ -141,7 +141,7 @@ static void utilWriteInt32(unsigned char *buf, int32_t i) {
 
 
 // Read 64 bit integer
-static int64_t utilReadInt64(const unsigned char *buf) {
+int64_t utilReadInt64(const unsigned char *buf) {
 	int64_t i;
 	if(utilIsLittleEndian()) {
 		((unsigned char *)&i)[0] = buf[7];
@@ -162,7 +162,7 @@ static int64_t utilReadInt64(const unsigned char *buf) {
 
 
 // Write 64 bit integer
-static void utilWriteInt64(unsigned char *buf, int64_t i) {
+void utilWriteInt64(unsigned char *buf, int64_t i) {
 	if(utilIsLittleEndian()) {
 		buf[0] = ((unsigned char *)&i)[7];
 		buf[1] = ((unsigned char *)&i)[6];
@@ -180,7 +180,7 @@ static void utilWriteInt64(unsigned char *buf, int64_t i) {
 
 
 // Get clock value in seconds
-static int utilGetClock() {
+int utilGetClock() {
 	return time(NULL);
 }
 
