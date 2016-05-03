@@ -38,6 +38,14 @@
 #endif
 
 
+#include "io.h"
+
+#include <stdlib.h>
+#include <fcntl.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+
 #include <stdlib.h>
 #include <fcntl.h>
 #include <string.h>
@@ -123,5 +131,121 @@ struct s_io_state {
     unsigned char nat64_prefix[12];
     int debug;
 };
+
+
+// Returns length of string.
+int ioStrlen(const char *str, const int max_len);
+
+// Resolve name. Returns number of addresses.
+int ioResolveName(struct s_io_addrinfo *iai, const char *hostname, const char *port);
+
+// Reset handle ID values and buffers.
+void ioResetID(struct s_io_state *iostate, const int id);
+
+// Allocates a handle ID. Returns ID if succesful, or -1 on error.
+int ioAllocID(struct s_io_state *iostate);
+
+// Deallocates a handle ID.
+void ioDeallocID(struct s_io_state *iostate, const int id);
+
+// Closes a handle ID.
+void ioClose(struct s_io_state *iostate, const int id);
+
+// Opens a socket. Returns handle ID if successful, or -1 on error.
+int ioOpenSocket(struct s_io_state *iostate, const int iotype, const char *bindaddress, const char *bindport, const int domain, const int type, const int protocol);
+
+// Opens an IPv6 UDP socket. Returns handle ID if successful, or -1 on error.
+int ioOpenSocketV6(struct s_io_state *iostate, const char *bindaddress, const char *bindport);
+
+// Opens an IPv4 UDP socket. Returns handle ID if successful, or -1 on error.
+int ioOpenSocketV4(struct s_io_state *iostate, const char *bindaddress, const char *bindport);
+
+// Helper functions for TAP devices on Windows.
+#if defined(IO_WINDOWS)
+
+char *ioOpenTAPWINSearch(char *value, char *key, int type)
+
+HANDLE ioOpenTAPWINDev(char *guid, char *dev);
+
+HANDLE ioOpenTAPWINHandle(char *tapname, const char *reqname, const int reqname_len);
+#endif
+
+
+// Opens a TAP device. Returns handle ID if succesful, or -1 on error.
+int ioOpenTAP(struct s_io_state *iostate, char *tapname, const char *reqname);
+
+// Opens STDIN. Returns handle ID if succesful, or -1 on error.
+int ioOpenSTDIN(struct s_io_state *iostate);
+
+// Receives an UDP packet. Returns length of received message, or 0 if nothing is received.
+int ioHelperRecvFrom(struct s_io_handle *handle, unsigned char *recv_buf, const int recv_buf_size, struct sockaddr *source_sockaddr, socklen_t *source_sockaddr_len);
+
+#if defined(IO_WINDOWS)
+// Finish receiving an UDP packet. Returns amount of bytes read, or 0 if nothing is read.
+int ioHelperFinishRecvFrom(struct s_io_handle *handle);
+#endif
+
+
+// Sends an UDP packet. Returns length of sent message.
+int ioHelperSendTo(struct s_io_handle *handle, const unsigned char *send_buf, const int send_buf_size, const struct sockaddr *destination_sockaddr, const socklen_t destination_sockaddr_len);
+
+// Reads from file. Returns amount of bytes read, or 0 if nothing is read.
+int ioHelperReadFile(struct s_io_handle *handle, unsigned char *read_buf, const int read_buf_size);
+
+#if defined(IO_WINDOWS)
+// Finish reading from file. Returns amount of bytes read, or 0 if nothing is read.
+int ioHelperFinishReadFile(struct s_io_handle *handle);
+#endif
+
+// Writes to file. Returns amount of bytes written.
+int ioHelperWriteFile(struct s_io_handle *handle, const unsigned char *write_buf, const int write_buf_size);
+
+// Prepares read operation on specified handle ID.
+void ioPreRead(struct s_io_state *iostate, const int id);
+
+// Reads data on specified handle ID. Returns amount of bytes read, or 0 if nothing is read.
+int ioRead(struct s_io_state *iostate, const int id);
+
+// Waits for data on any handle and read it. Returns the amount of handles where data have been read.
+int ioReadAll(struct s_io_state *iostate);
+
+// Writes data on specified handle ID. Returns amount of bytes written.
+int ioWrite(struct s_io_state *iostate, const int id, const unsigned char *write_buf, const int write_buf_size, const struct s_io_addr *destination_addr);
+
+// Writes data on one handle ID of the specified group. Returns amount of bytes written.
+int ioWriteGroup(struct s_io_state *iostate, const int group, const unsigned char *write_buf, const int write_buf_size, const struct s_io_addr *destination_addr);
+
+// Returns the first handle of the specified group that has data, or -1 if there is none.
+int ioGetGroup(struct s_io_state *iostate, const int group);
+
+// Returns a pointer to the data buffer of the specified handle ID.
+unsigned char * ioGetData(struct s_io_state *iostate, const int id);
+
+// Returns the data buffer content length of the specified handle ID, or zero if there are no data.
+int ioGetDataLen(struct s_io_state *iostate, const int id);
+
+// Returns a pointer to the current source address of the specified handle ID.
+struct s_io_addr * ioGetAddr(struct s_io_state *iostate, const int id);
+
+// Clear data of the specified handle ID.
+void ioGetClear(struct s_io_state *iostate, const int id);
+
+// Set group ID of handle ID
+void ioSetGroup(struct s_io_state *iostate, const int id, const int group);
+
+// Set sockmark value for new sockets.
+void ioSetSockmark(struct s_io_state *iostate, const int io_sockmark);
+
+// Enable/Disable NAT64 CLAT support.
+void ioSetNat64Clat(struct s_io_state *iostate, const int enable);
+
+// Set IO read timeout (in seconds).
+void ioSetTimeout(struct s_io_state *iostate, const int io_timeout);
+
+// Closes all handles and resets defaults.
+void ioReset(struct s_io_state *iostate);
+
+// Create IO state structure. Returns 1 on success.
+int ioCreate(struct s_io_state *iostate, const int io_bufsize, const int io_max);
 
 #endif

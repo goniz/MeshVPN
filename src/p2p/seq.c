@@ -22,38 +22,23 @@
 
 
 #include <stdint.h>
-
-
-// Size of sequence number in bytes.
-#define seq_SIZE 8
-
-
-// Window size.
-#define seq_WINDOWSIZE 16384
-
-
-// The sequence number state structure.
-struct s_seq_state {
-	int64_t start;
-	uint64_t mask;
-};
-
+#include "p2p.h"
 
 // Get sequence number state.
-static int64_t seqGet(struct s_seq_state *state) {
+int64_t seqGet(struct s_seq_state *state) {
 	return state->start;
 }
 
 
 // Initialize sequence number state.
-static void seqInit(struct s_seq_state *state, const int64_t seq) {
+void seqInit(struct s_seq_state *state, const int64_t seq) {
 	state->start = seq;
 	state->mask = 0;
 }
 
 
 // Verify sequence number. Returns 1 if accepted, else 0.
-static int seqVerify(struct s_seq_state *state, const int64_t seq) {
+int seqVerify(struct s_seq_state *state, const int64_t seq) {
 	const uint_least64_t one = 1;
 	int64_t start = state->start;
 	int64_t seqdiff = (seq - start);
@@ -95,7 +80,7 @@ static int seqVerify(struct s_seq_state *state, const int64_t seq) {
 
 
 // Returns the amount of received sequence numbers out of the last 64.
-static int seqRQ(struct s_seq_state *state) {
+int seqRQ(struct s_seq_state *state) {
 	const int bitc[256] = {
 		0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 
 		1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 

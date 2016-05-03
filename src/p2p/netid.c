@@ -20,22 +20,10 @@
 #ifndef F_NETID_C
 #define F_NETID_C
 
+#include "p2p.h"
+#include "crypto.h"
 
-#include "../include/crypto.h"
-
-
-// NetID size in bytes.
-#define netid_SIZE 32
-#define NETID_SIZE 32
-
-
-// The NetID structure.
-struct s_netid {
-	unsigned char id[netid_SIZE];
-};
-
-
-static int netidSet(struct s_netid *netid, const char *netname, const int netname_len) {
+int netidSet(struct s_netid *netid, const char *netname, const int netname_len) {
 	memset(netid->id, 0, netid_SIZE);
 	return cryptoCalculateSHA256(netid->id, netid_SIZE, (unsigned char *)netname, netname_len);
 }

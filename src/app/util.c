@@ -24,7 +24,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <time.h>
-
+#include "util.h"
 
 // Convert a 4 bit number to a hexchar.
 char util4BitToHexchar(const int n) {

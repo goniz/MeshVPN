@@ -21,33 +21,14 @@
 #define F_PEERADDR_C
 
 
-#include "util.c"
+#include "util.h"
 #include "string.h"
 #include <arpa/inet.h>
-
-
-// Internal address types.
-#define peeraddr_INTERNAL_INDIRECT 1
-
-
-// PeerAddr size in bytes.
-#define peeraddr_SIZE 24
-
-
-// Constraints.
-#if peeraddr_SIZE != 24
-#error invalid peeraddr_SIZE
-#endif
-
-
-// The PeerAddr structure.
-struct s_peeraddr {
-	unsigned char addr[peeraddr_SIZE];
-};
+#include "p2p.h"
 
 
 // Returns true if PeerAddr is internal.
-static int peeraddrIsInternal(const struct s_peeraddr *peeraddr) {
+int peeraddrIsInternal(const struct s_peeraddr *peeraddr) {
 	int i;
 	i = utilReadInt32(&peeraddr->addr[0]);
 	if(i == 0) {
@@ -60,7 +41,7 @@ static int peeraddrIsInternal(const struct s_peeraddr *peeraddr) {
 
 
 // Returns type of internal PeerAddr or -1 if it is not internal.
-static int peeraddrGetInternalType(const struct s_peeraddr *peeraddr) {
+int peeraddrGetInternalType(const struct s_peeraddr *peeraddr) {
 	if(peeraddrIsInternal(peeraddr)) {
 		return utilReadInt32(&peeraddr->addr[4]);
 	}
@@ -71,7 +52,7 @@ static int peeraddrGetInternalType(const struct s_peeraddr *peeraddr) {
 
 
 // Get indirect PeerAddr attributes. Returns 1 on success or 0 if the PeerAddr is not indirect.
-static int peeraddrGetIndirect(const struct s_peeraddr *peeraddr, int *relayid, int *relayct, int *peerid) {
+int peeraddrGetIndirect(const struct s_peeraddr *peeraddr, int *relayid, int *relayct, int *peerid) {
 	if(peeraddrGetInternalType(peeraddr) != peeraddr_INTERNAL_INDIRECT) {
 		return 0;
 	}
@@ -92,7 +73,7 @@ static int peeraddrGetIndirect(const struct s_peeraddr *peeraddr, int *relayid, 
 
 
 // Construct indirect PeerAddr.
-static void peeraddrSetIndirect(struct s_peeraddr *peeraddr, const int relayid, const int relayct, const int peerid) {
+void peeraddrSetIndirect(struct s_peeraddr *peeraddr, const int relayid, const int relayct, const int peerid) {
 	utilWriteInt32(&peeraddr->addr[0], 0);
 	utilWriteInt32(&peeraddr->addr[4], peeraddr_INTERNAL_INDIRECT);
 	utilWriteInt32(&peeraddr->addr[8], relayid);
@@ -101,11 +82,10 @@ static void peeraddrSetIndirect(struct s_peeraddr *peeraddr, const int relayid, 
 	utilWriteInt32(&peeraddr->addr[20], 0);
 }
 
-#define CREATE_HUMAN_IP(variable) char humanIp[60]; peeraddrToHuman(humanIp, variable);
 /**
  * Copy human readable peer address to buffer
  */
-static void peeraddrToHuman(char * buffer, const struct s_peeraddr * peeraddr) {
+void peeraddrToHuman(char * buffer, const struct s_peeraddr * peeraddr) {
     char res[64];
     inet_ntop(AF_INET, &peeraddr->addr[4], res, 64);
     

@@ -22,16 +22,14 @@
 
 #include <time.h>
 
-#include "../../libp2psec/msg.c"
-#include "../../libp2psec/seq.c"
-#include "../../libp2psec/netid.c"
-
+#include "idsp.h"
 #include "dh.h"
 #include "logging.h"
 #include "rsa.h"
 #include "auth.h"
 #include "util.h"
 #include "nodeid.h"
+#include "p2p.h"
 
 
 // Prepare signature input buffer for remote sig(authid, msgnum, remote_nonce, local_nonce, local_dhkey, remote_dhkey).

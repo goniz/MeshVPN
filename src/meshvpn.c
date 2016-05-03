@@ -22,21 +22,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <openssl/engine.h>
-
-#include "ethernet/switch.c"
-#include "ethernet/ndp6.c"
-#include "ethernet/virtserv.c"
-#include "libp2psec/p2psec.c"
-#include "platform/io.c"
-#include "platform/ifconfig.c"
 #include "include/globals.h"
-#include "include/rsa.h"
-#include "console.ic"
-#include "mainloop.c"
-#include "config.c"
+
+#include "rsa.h"
+#include "app.h"
 #include "pwd.ic"
-#include "init.c"
-#include "include/logging.h"
+#include "logging.h"
 
 
 // commandline parser
@@ -48,43 +39,8 @@ int main(int argc, char **argv) {
 	struct s_initconfig config;
 
 	// default configuration
-<<<<<<< HEAD:src/meshvpn.c
-	strcpy(config.tapname,"");
-	strcpy(config.ifconfig4,"");
-	strcpy(config.ifconfig6,"");
-	strcpy(config.upcmd,"");
-	strcpy(config.sourceip,"");
-	strcpy(config.sourceport,"");
-	strcpy(config.userstr,"");
-	strcpy(config.groupstr,"");
-	strcpy(config.chrootstr,"");
-	strcpy(config.networkname,"MESHVPN");
-	strcpy(config.initpeers,"");
-	strcpy(config.engines,"");
-    strcpy(config.pidfile, "");
-    strcpy(config.privatekey, "/var/run/peervpn.pem");
-	config.password_len = 0;
-	config.enablepidfile = 0;
-	config.enableeth = 1;
-	config.enablendpcache = 0;
-	config.enablevirtserv = 0;
-	config.enablerelay = 0;
-	config.enableindirect = 0;
-	config.enableconsole = 0;
-	config.enableseccomp = 0;
-	config.forceseccomp = 0;
-    config.daemonize = 0;
-	config.enableprivdrop = 1;
-	config.enableipv4 = 1;
-	config.enableipv6 = 1;
-	config.enablenat64clat = 0;
-	config.enablesyslog = 0;	
-	config.sockmark = 0;
-	config.enablepidfile = 0;
-	setbuf(stdout,NULL);
-=======
+
     setbuf(stdout,NULL);
->>>>>>> several initpeers now allowed, seccomp fixed:peervpn.c
 
 	confok = 0;
 	if(argc != 2) {
@@ -117,7 +73,7 @@ int main(int argc, char **argv) {
 		return show_usage();
 	}
 	if(config.enablesyslog)	{
-		logger_set_mode(LOGGING_SYSLOG);	
+		logger_set_mode(LOGGING_SYSLOG);
 	}
 	if(config.daemonize) {
 		msg("Detaching process");
@@ -139,7 +95,7 @@ int main(int argc, char **argv) {
 		fprintf(fp, "%d", pid);
 		fclose(fp);
 	}
-    
+
 	// start vpn node
 	init(&config);
 	return 0;

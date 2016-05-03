@@ -20,42 +20,17 @@
 #ifndef F_NDP6_C
 #define F_NDP6_C
 
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
-#include "../libp2psec/map.c"
-#include "../libp2psec/util.c"
-#include "checksum.c"
-
-
-// Constants.
-#define ndp6_TABLE_SIZE 1024
-#define ndp6_ADDR_SIZE 16
-#define ndp6_MAC_SIZE 6
-#define ndp6_TIMEOUT 86400
-
-
-// Constraints.
-#if ndp6_ADDR_SIZE != 16
-#error ndp6_ADDR_SIZE != 16
-#endif
-#if ndp6_MAC_SIZE != 6
-#error ndp6_MAC_SIZE != 6
-#endif
-
-
-// NDP6 structures.
-struct s_ndp6_ndptable_entry {
-	unsigned char mac[ndp6_MAC_SIZE];
-	int portid;
-	int portts;
-	int ents;
-};
-struct s_ndp6_state {
-	struct s_map ndptable;
-};
-
+#include "ethernet.h"
+#include "p2p.h"
+#include "util.h"
+#include "map.h"
 
 // Learn MAC+PortID+PortTS of incoming IPv6 packet.
-static void ndp6PacketIn(struct s_ndp6_state *ndpstate, const unsigned char *frame, const int frame_len, const int portid, const int portts) {
+void ndp6PacketIn(struct s_ndp6_state *ndpstate, const unsigned char *frame, const int frame_len, const int portid, const int portts) {
 	struct s_ndp6_ndptable_entry mapentry;
 	const unsigned char *ipv6addr;
 	const unsigned char *macaddr;
@@ -80,7 +55,7 @@ static void ndp6PacketIn(struct s_ndp6_state *ndpstate, const unsigned char *fra
 
 
 // Generate neighbor advertisement. Returns length of generated answer.
-static int ndp6GenAdvFrame(unsigned char *outbuf, const int outbuf_len, const unsigned char *src_addr, const unsigned char *dest_addr, const unsigned char *src_mac, const unsigned char *dest_mac) {
+int ndp6GenAdvFrame(unsigned char *outbuf, const int outbuf_len, const unsigned char *src_addr, const unsigned char *dest_addr, const unsigned char *src_mac, const unsigned char *dest_mac) {
 	struct s_checksum checksum;
 	int i;
 	uint16_t u;
@@ -113,7 +88,7 @@ static int ndp6GenAdvFrame(unsigned char *outbuf, const int outbuf_len, const un
 
 
 // Scan Ethernet frame for neighbour solicitation and generate answer neighbor advertisement. Returns length of generated answer.
-static int ndp6GenAdv(struct s_ndp6_state *ndpstate, const unsigned char *frame, const int frame_len, unsigned char *advbuf, const int advbuf_len, int *portid, int *portts) {
+int ndp6GenAdv(struct s_ndp6_state *ndpstate, const unsigned char *frame, const int frame_len, unsigned char *advbuf, const int advbuf_len, int *portid, int *portts) {
 	struct s_ndp6_ndptable_entry *mapentry;
 	const unsigned char *ipv6addr;
 	const unsigned char *macaddr;
@@ -152,7 +127,7 @@ static int ndp6GenAdv(struct s_ndp6_state *ndpstate, const unsigned char *frame,
 
 
 // Generate NDP table status report.
-static void ndp6Status(struct s_ndp6_state *ndpstate, char *report, const int report_len) {
+void ndp6Status(struct s_ndp6_state *ndpstate, char *report, const int report_len) {
 	int tnow = utilGetClock();
 	struct s_map *map = &ndpstate->ndptable;
 	struct s_ndp6_ndptable_entry *mapentry;
@@ -219,7 +194,7 @@ static void ndp6Status(struct s_ndp6_state *ndpstate, char *report, const int re
 
 
 // Create NDP6 structure.
-static int ndp6Create(struct s_ndp6_state *ndpstate) {
+int ndp6Create(struct s_ndp6_state *ndpstate) {
 	if(mapCreate(&ndpstate->ndptable, ndp6_TABLE_SIZE, ndp6_ADDR_SIZE, sizeof(struct s_ndp6_ndptable_entry))) {
 		mapEnableReplaceOld(&ndpstate->ndptable);
 		mapInit(&ndpstate->ndptable);
@@ -230,7 +205,7 @@ static int ndp6Create(struct s_ndp6_state *ndpstate) {
 
 
 // Destroy NDP6 structure.
-static void ndp6Destroy(struct s_ndp6_state *ndpstate) {
+void ndp6Destroy(struct s_ndp6_state *ndpstate) {
 	mapDestroy(&ndpstate->ndptable);
 }
 

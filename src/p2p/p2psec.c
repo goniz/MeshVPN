@@ -21,35 +21,14 @@
 #define F_P2PSEC_C
 
 
-#include "../include/p2psec.h"
-#include "../include/logging.h"
-#include "../include/rsa.h"
-
-#include "peermgt.c"
+#include "p2p.h"
+#include "logging.h"
+#include "rsa.h"
+#include "platform.h"
+#include "map.h"
 #include <unistd.h>
 
-
-P2PSEC_CTX {
-	struct s_peermgt mgt;
-	struct s_nodekey nk;
-	struct s_dh_state dh;
-	int started;
-	int key_loaded;
-	int dh_loaded;
-	int peer_count;
-	int auth_count;
-	int loopback_enable;
-	int fastauth_enable;
-	int fragmentation_enable;
-	int flags;
-	char password[1024];
-	int password_len;
-	char netname[1024];
-	int netname_len;
-};
-
-
-int p2psecStart(P2PSEC_CTX *p2psec) {
+int p2psecStart(struct s_p2psec *p2psec) {
 	if(!cryptoRandInit()) {
 		return 0;
 	}
@@ -74,7 +53,7 @@ int p2psecStart(P2PSEC_CTX *p2psec) {
 }
 
 
-void p2psecStop(P2PSEC_CTX *p2psec) {
+void p2psecStop(struct s_p2psec *p2psec) {
 	if(!p2psec->started) return;
 
 	peermgtDestroy(&p2psec->mgt);
@@ -96,7 +75,7 @@ int p2psecGetNodeIDSize() {
  * otherwise we will try to load it.
  * keypath - should be writable path, might be in chrooted dir, because private keys readed before priveleges revoke
  */
-int p2psecInitPrivateKey(P2PSEC_CTX *p2psec, const int bits, const char *keypath) {
+int p2psecInitPrivateKey(struct s_p2psec *p2psec, const int bits, const char *keypath) {
     if(strlen(keypath) > 0) {
         debugf("Initialize  encryption keys, save path is %s", keypath);
     }
@@ -124,7 +103,7 @@ int p2psecInitPrivateKey(P2PSEC_CTX *p2psec, const int bits, const char *keypath
     return 1;
 }
 
-int p2psecImportPrivkey(P2PSEC_CTX * p2psec, const char * keypath) {
+int p2psecImportPrivkey(struct s_p2psec * p2psec, const char * keypath) {
     if(!nodekeyCreate(&p2psec->nk)) {
         debug("failed to initialize node key");
         return 0;
@@ -141,7 +120,7 @@ int p2psecImportPrivkey(P2PSEC_CTX * p2psec, const char * keypath) {
 /**
  * Export key to
  */
-int p2psecExportPrivkey(P2PSEC_CTX * p2psec, const char * keypath) {
+int p2psecExportPrivkey(struct s_p2psec * p2psec, const char * keypath) {
     if(!p2psec->key_loaded) {
         debug("unable to save key because it's not loaded!");
         return 0;
@@ -159,7 +138,7 @@ int p2psecExportPrivkey(P2PSEC_CTX * p2psec, const char * keypath) {
 /**
  * Generate or load private key from file
  */
-int p2psecGeneratePrivkey(P2PSEC_CTX *p2psec, const int bits) {
+int p2psecGeneratePrivkey(struct s_p2psec *p2psec, const int bits) {
 	if(p2psec->key_loaded) nodekeyDestroy(&p2psec->nk);
     
 	if(bits >= 1024 && bits <= 3072) {
@@ -176,7 +155,7 @@ int p2psecGeneratePrivkey(P2PSEC_CTX *p2psec, const int bits) {
 }
 
 
-int p2psecLoadDH(P2PSEC_CTX *p2psec) {
+int p2psecLoadDH(struct s_p2psec *p2psec) {
 	if(p2psec->dh_loaded) return 1;
 	if(dhCreate(&p2psec->dh)) {
 		p2psec->dh_loaded = 1;
@@ -186,18 +165,18 @@ int p2psecLoadDH(P2PSEC_CTX *p2psec) {
 }
 
 
-void p2psecSetMaxConnectedPeers(P2PSEC_CTX *p2psec, const int peer_count) {
+void p2psecSetMaxConnectedPeers(struct s_p2psec *p2psec, const int peer_count) {
 	if(peer_count > 0) p2psec->peer_count = peer_count;
 	
 }
 
 
-void p2psecSetAuthSlotCount(P2PSEC_CTX *p2psec, const int auth_slot_count) {
+void p2psecSetAuthSlotCount(struct s_p2psec *p2psec, const int auth_slot_count) {
 	if(auth_slot_count > 0) p2psec->auth_count = auth_slot_count;
 }
 
 
-void p2psecSetNetname(P2PSEC_CTX *p2psec, const char *netname, const int netname_len) {
+void p2psecSetNetname(struct s_p2psec *p2psec, const char *netname, const int netname_len) {
 	int len;
 	if(netname_len < 1024) {
 		len = netname_len;
@@ -220,7 +199,7 @@ void p2psecSetNetname(P2PSEC_CTX *p2psec, const char *netname, const int netname
 }
 
 
-void p2psecSetPassword(P2PSEC_CTX *p2psec, const char *password, const int password_len) {
+void p2psecSetPassword(struct s_p2psec *p2psec, const char *password, const int password_len) {
     int len = (password_len < 1024) ? password_len : 1023;
     
 	memset(p2psec->password, 0, 1024);
@@ -236,43 +215,43 @@ void p2psecSetPassword(P2PSEC_CTX *p2psec, const char *password, const int passw
 }
 
 
-void p2psecEnableLoopback(P2PSEC_CTX *p2psec) {
+void p2psecEnableLoopback(struct s_p2psec *p2psec) {
 	p2psec->loopback_enable = 1;
 	if(p2psec->started) peermgtSetLoopback(&p2psec->mgt, 1);
 }
 
 
-void p2psecDisableLoopback(P2PSEC_CTX *p2psec) {
+void p2psecDisableLoopback(struct s_p2psec *p2psec) {
 	p2psec->loopback_enable = 0;
 	if(p2psec->started) peermgtSetLoopback(&p2psec->mgt, 0);
 }
 
 
-void p2psecEnableFastauth(P2PSEC_CTX *p2psec) {
+void p2psecEnableFastauth(struct s_p2psec *p2psec) {
 	p2psec->fastauth_enable = 1;
 	if(p2psec->started) peermgtSetFastauth(&p2psec->mgt, 1);
 }
 
 
-void p2psecDisableFastauth(P2PSEC_CTX *p2psec) {
+void p2psecDisableFastauth(struct s_p2psec *p2psec) {
 	p2psec->fastauth_enable = 0;
 	if(p2psec->started) peermgtSetFastauth(&p2psec->mgt, 0);
 }
 
 
-void p2psecEnableFragmentation(P2PSEC_CTX *p2psec) {
+void p2psecEnableFragmentation(struct s_p2psec *p2psec) {
 	p2psec->fragmentation_enable = 1;
 	if(p2psec->started) peermgtSetFragmentation(&p2psec->mgt, 1);
 }
 
 
-void p2psecDisableFragmentation(P2PSEC_CTX *p2psec) {
+void p2psecDisableFragmentation(struct s_p2psec *p2psec) {
 	p2psec->fragmentation_enable = 0;
 	if(p2psec->started) peermgtSetFragmentation(&p2psec->mgt, 0);
 }
 
 
-void p2psecSetFlag(P2PSEC_CTX *p2psec, const int flag, const int enable) {
+void p2psecSetFlag(struct s_p2psec *p2psec, const int flag, const int enable) {
 	int f;
 	if(enable) {
 		f = (p2psec->flags | flag);
@@ -285,27 +264,27 @@ void p2psecSetFlag(P2PSEC_CTX *p2psec, const int flag, const int enable) {
 }
 
 
-void p2psecEnableUserdata(P2PSEC_CTX *p2psec) {
+void p2psecEnableUserdata(struct s_p2psec *p2psec) {
 	p2psecSetFlag(p2psec, peermgt_FLAG_USERDATA, 1);
 }
 
 
-void p2psecDisableUserdata(P2PSEC_CTX *p2psec) {
+void p2psecDisableUserdata(struct s_p2psec *p2psec) {
 	p2psecSetFlag(p2psec, peermgt_FLAG_USERDATA, 0);
 }
 
 
-void p2psecEnableRelay(P2PSEC_CTX *p2psec) {
+void p2psecEnableRelay(struct s_p2psec *p2psec) {
 	p2psecSetFlag(p2psec, peermgt_FLAG_RELAY, 1);
 }
 
 
-void p2psecDisableRelay(P2PSEC_CTX *p2psec) {
+void p2psecDisableRelay(struct s_p2psec *p2psec) {
 	p2psecSetFlag(p2psec, peermgt_FLAG_RELAY, 0);
 }
 
 
-int p2psecLoadDefaults(P2PSEC_CTX *p2psec) {
+int p2psecLoadDefaults(struct s_p2psec *p2psec) {
 	if(!p2psecLoadDH(p2psec)) return 0;
 	p2psecSetFlag(p2psec, (~(0)), 0);
 	p2psecSetMaxConnectedPeers(p2psec, 256);
@@ -321,9 +300,9 @@ int p2psecLoadDefaults(P2PSEC_CTX *p2psec) {
 }
 
 
-P2PSEC_CTX *p2psecCreate() {
-	P2PSEC_CTX *p2psec;
-	p2psec = malloc(sizeof(P2PSEC_CTX));
+struct s_p2psec *p2psecCreate() {
+	struct s_p2psec *p2psec;
+	p2psec = malloc(sizeof(struct s_p2psec));
 	if(p2psec != NULL) {
 		p2psec->started = 0;
 		p2psec->key_loaded = 0;
@@ -336,7 +315,7 @@ P2PSEC_CTX *p2psecCreate() {
 }
 
 
-void p2psecDestroy(P2PSEC_CTX *p2psec) {
+void p2psecDestroy(struct s_p2psec *p2psec) {
 	p2psecStop(p2psec);
 	if(p2psec->key_loaded) nodekeyDestroy(&p2psec->nk);
 	if(p2psec->dh_loaded) dhDestroy(&p2psec->dh);
@@ -351,17 +330,17 @@ void p2psecDestroy(P2PSEC_CTX *p2psec) {
 }
 
 
-void p2psecStatus(P2PSEC_CTX *p2psec, char *status_report, const int status_report_len) {
+void p2psecStatus(struct s_p2psec *p2psec, char *status_report, const int status_report_len) {
 	peermgtStatus(&p2psec->mgt, status_report, status_report_len);
 }
 
 
-void p2psecNodeDBStatus(P2PSEC_CTX *p2psec, char *status_report, const int status_report_len) {
+void p2psecNodeDBStatus(struct s_p2psec *p2psec, char *status_report, const int status_report_len) {
 	nodedbStatus(&p2psec->mgt.nodedb, status_report, status_report_len);
 }
 
 
-int p2psecConnect(P2PSEC_CTX *p2psec, const unsigned char *destination_addr) {
+int p2psecConnect(struct s_p2psec *p2psec, const unsigned char *destination_addr) {
     debugf("P2P connection to %s", destination_addr);
 	struct s_peeraddr addr;
 	memcpy(addr.addr, destination_addr, peeraddr_SIZE);
@@ -369,14 +348,14 @@ int p2psecConnect(P2PSEC_CTX *p2psec, const unsigned char *destination_addr) {
 }
 
 
-int p2psecInputPacket(P2PSEC_CTX *p2psec, const unsigned char *packet_input, const int packet_input_len, const unsigned char *packet_source_addr) {
+int p2psecInputPacket(struct s_p2psec *p2psec, const unsigned char *packet_input, const int packet_input_len, const unsigned char *packet_source_addr) {
 	struct s_peeraddr addr;
 	memcpy(addr.addr, packet_source_addr, peeraddr_SIZE);
 	return peermgtDecodePacket(&p2psec->mgt, packet_input, packet_input_len, &addr);
 }
 
 
-unsigned char *p2psecRecvMSG(P2PSEC_CTX *p2psec, unsigned char *source_nodeid, int *message_len) {
+unsigned char *p2psecRecvMSG(struct s_p2psec *p2psec, unsigned char *source_nodeid, int *message_len) {
 	struct s_msg msg;
 	struct s_nodeid nodeid;
     char nodeIdHuman[NODEID_SIZE + 1];
@@ -396,7 +375,7 @@ unsigned char *p2psecRecvMSG(P2PSEC_CTX *p2psec, unsigned char *source_nodeid, i
 }
 
 
-unsigned char *p2psecRecvMSGFromPeerID(P2PSEC_CTX *p2psec, int *source_peerid, int *source_peerct, int *message_len) {
+unsigned char *p2psecRecvMSGFromPeerID(struct s_p2psec *p2psec, int *source_peerid, int *source_peerct, int *message_len) {
 	struct s_msg msg;
 	if(peermgtRecvUserdata(&p2psec->mgt, &msg, NULL, source_peerid, source_peerct)) {
 		*message_len = msg.len;
@@ -408,7 +387,7 @@ unsigned char *p2psecRecvMSGFromPeerID(P2PSEC_CTX *p2psec, int *source_peerid, i
 }
 
 
-int p2psecSendMSG(P2PSEC_CTX *p2psec, const unsigned char *destination_nodeid, unsigned char *message, int message_len) {
+int p2psecSendMSG(struct s_p2psec *p2psec, const unsigned char *destination_nodeid, unsigned char *message, int message_len) {
 	struct s_msg msg = { .msg = message, .len = message_len };
 	struct s_nodeid nodeid;
 	memcpy(nodeid.id, destination_nodeid, nodeid_SIZE);
@@ -416,19 +395,19 @@ int p2psecSendMSG(P2PSEC_CTX *p2psec, const unsigned char *destination_nodeid, u
 }
 
 
-int p2psecSendBroadcastMSG(P2PSEC_CTX *p2psec, unsigned char *message, int message_len) {
+int p2psecSendBroadcastMSG(struct s_p2psec *p2psec, unsigned char *message, int message_len) {
 	struct s_msg msg = { .msg = message, .len = message_len };
 	return peermgtSendBroadcastUserdata(&p2psec->mgt, &msg);
 }
 
 
-int p2psecSendMSGToPeerID(P2PSEC_CTX *p2psec, const int destination_peerid, const int destination_peerct, unsigned char *message, int message_len) {
+int p2psecSendMSGToPeerID(struct s_p2psec *p2psec, const int destination_peerid, const int destination_peerct, unsigned char *message, int message_len) {
 	struct s_msg msg = { .msg = message, .len = message_len };
 	return peermgtSendUserdata(&p2psec->mgt, &msg, NULL, destination_peerid, destination_peerct);
 }
 
 
-int p2psecOutputPacket(P2PSEC_CTX *p2psec, unsigned char *packet_output, const int packet_output_len, unsigned char *packet_destination_addr) {
+int p2psecOutputPacket(struct s_p2psec *p2psec, unsigned char *packet_output, const int packet_output_len, unsigned char *packet_destination_addr) {
 	struct s_peeraddr addr;
 	int len = peermgtGetNextPacket(&p2psec->mgt, packet_output, packet_output_len, &addr);
 	if(len > 0) {
@@ -441,13 +420,13 @@ int p2psecOutputPacket(P2PSEC_CTX *p2psec, unsigned char *packet_output, const i
 }
 
 
-int p2psecPeerCount(P2PSEC_CTX *p2psec) {
+int p2psecPeerCount(struct s_p2psec *p2psec) {
 	int n = peermgtPeerCount(&p2psec->mgt);
 	return n;
 }
 
 
-int p2psecUptime(P2PSEC_CTX *p2psec) {
+int p2psecUptime(struct s_p2psec *p2psec) {
 	if(p2psec == NULL) { return 0; }
 	int uptime = peermgtUptime(&p2psec->mgt);
 	return uptime;

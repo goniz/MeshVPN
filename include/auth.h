@@ -26,9 +26,8 @@
 #include "util.h"
 #include "nodeid.h"
 
-#include "../libp2psec/msg.c"
-#include "../libp2psec/seq.c"
-#include "../libp2psec/netid.c"
+#include "idsp.h"
+#include "p2p.h"
 
 // Auth state definitions.
 #define auth_IDLE 0

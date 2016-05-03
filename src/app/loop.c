@@ -18,6 +18,8 @@
 #include "logging.h"
 #include "globals.h"
 #include "io.h"
+#include "p2p.h"
+#include "map.h"
 #include "platform.h"
 
 // Connect initpeers.
@@ -39,7 +41,7 @@ void connectInitpeers(struct s_initpeers * peers) {
 
 
 // the mainloop
-static void mainLoop(struct s_initpeers * peers) {
+void mainLoop(struct s_initpeers * peers) {
 	int fd;
 	int tnow;
 	unsigned char sockdata_buf[4096];

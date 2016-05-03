@@ -20,43 +20,17 @@
 #ifndef F_SWITCH_C
 #define F_SWITCH_C
 
+#include <stdio.h>
+#include <string.h>
 
-#include "../libp2psec/map.c"
-#include "../libp2psec/util.c"
-
-
-// Constants.
-#define switch_FRAME_TYPE_INVALID 0
-#define switch_FRAME_TYPE_BROADCAST 1
-#define switch_FRAME_TYPE_UNICAST 2
-#define switch_FRAME_MINSIZE 14
-#define switch_MACADDR_SIZE 6
-#define switch_MACMAP_SIZE 8192
-#define switch_TIMEOUT 86400
-
-
-// Constraints.
-#if switch_FRAME_MINSIZE < switch_MACADDR_SIZE + switch_MACADDR_SIZE
-#error switch_FRAME_MINSIZE too small
-#endif
-#if switch_MACADDR_SIZE != 6
-#error switch_MACADDR_SIZE is not 6
-#endif
-
-
-// Switchstate structures.
-struct s_switch_mactable_entry {
-	int portid;
-	int portts;
-	int ents;
-};
-struct s_switch_state {
-	struct s_map mactable;
-};
+#include "ethernet.h"
+#include "p2p.h"
+#include "util.h"
+#include "map.h"
 
 
 // Get type of outgoing frame. If it is an unicast frame, also returns PortID and PortTS.
-static int switchFrameOut(struct s_switch_state *switchstate, const unsigned char *frame, const int frame_len, int *portid, int *portts) {
+int switchFrameOut(struct s_switch_state *switchstate, const unsigned char *frame, const int frame_len, int *portid, int *portts) {
 	struct s_switch_mactable_entry *mapentry;
 	const unsigned char *macaddr;
 	int pos;
@@ -89,7 +63,7 @@ static int switchFrameOut(struct s_switch_state *switchstate, const unsigned cha
 
 
 // Learn PortID+PortTS of incoming frame.
-static void switchFrameIn(struct s_switch_state *switchstate, const unsigned char *frame, const int frame_len, const int portid, const int portts) {
+void switchFrameIn(struct s_switch_state *switchstate, const unsigned char *frame, const int frame_len, const int portid, const int portts) {
 	struct s_switch_mactable_entry mapentry;
 	const unsigned char *macaddr;
 	if(frame_len > switch_FRAME_MINSIZE) {
@@ -105,7 +79,7 @@ static void switchFrameIn(struct s_switch_state *switchstate, const unsigned cha
 
 
 // Generate MAC table status report.
-static void switchStatus(struct s_switch_state *switchstate, char *report, const int report_len) {
+void switchStatus(struct s_switch_state *switchstate, char *report, const int report_len) {
 	int tnow = utilGetClock();
 	struct s_map *map = &switchstate->mactable;
 	struct s_switch_mactable_entry *mapentry;
@@ -160,7 +134,7 @@ static void switchStatus(struct s_switch_state *switchstate, char *report, const
 
 
 // Create switchstate structure.
-static int switchCreate(struct s_switch_state *switchstate) {
+int switchCreate(struct s_switch_state *switchstate) {
 	if(mapCreate(&switchstate->mactable, switch_MACMAP_SIZE, switch_MACADDR_SIZE, sizeof(struct s_switch_mactable_entry))) {
 		mapEnableReplaceOld(&switchstate->mactable);
 		mapInit(&switchstate->mactable);
@@ -171,7 +145,7 @@ static int switchCreate(struct s_switch_state *switchstate) {
 
 
 // Destroy switchstate structure.
-static void switchDestroy(struct s_switch_state *switchstate) {
+void switchDestroy(struct s_switch_state *switchstate) {
 	mapDestroy(&switchstate->mactable);
 }
 
