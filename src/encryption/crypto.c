@@ -32,6 +32,7 @@
 #include <unistd.h>
 #include <string.h>
 
+int cryptoRandFD = -1;
 
 // return EVP cipher key size
 int cryptoGetEVPCipherSize(struct s_crypto_cipher *st_cipher) {
@@ -52,9 +53,6 @@ struct s_crypto_md cryptoGetEVPMD(const EVP_MD *md) {
 	return ret;
 }
 
-
-// initialize random number generator
-cryptoRandFD = -1;
 int cryptoRandInit() {
 	int fd;
 	unsigned char randbuf[64];

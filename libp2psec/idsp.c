@@ -139,25 +139,6 @@ static int idspNext(struct s_idsp *idsp) {
 }
 
 
-
-/*
-static int idspNext(struct s_idsp *idsp) {
-	int iter;
-	int used;
-	iter = idsp->iter;
-	used = idsp->used;
-	if(used > 0) {
-		if(!(iter < used)) { iter = 0; }
-		idsp->iter = (iter + 1);
-		return idsp->idlist[iter];
-	}
-	else {
-		return -1;
-	}
-}
-*/
-
-
 static int idspNew(struct s_idsp *idsp) {
 	int new_id;
 	int new_pos;

@@ -808,6 +808,7 @@ static int peermgtDecodePacketAuth(struct s_peermgt *mgt, const struct s_packet_
             authmgtGetCompletedPeerAddress(authmgt, &mgt->data[peerid].remoteid, &mgt->data[peerid].remoteaddr);
             authmgtGetCompletedPeerSessionKeys(authmgt, &mgt->ctx[peerid]);
             authmgtGetCompletedPeerConnectionParams(authmgt, &mgt->data[peerid].remoteseq, &remoteflags);
+            
             mgt->data[peerid].remoteflags = remoteflags;
             mgt->data[peerid].state = peermgt_STATE_COMPLETE;
             mgt->data[peerid].lastrecv = tnow;
@@ -830,31 +831,40 @@ static int peermgtDecodePacketPeerinfo(struct s_peermgt *mgt, const struct s_pac
 	int relaypeerid;
 	int i;
 	int64_t r;
-	if(data->pl_length > 4) {
-		peerid = data->peerid;
-		if(peermgtIsActiveRemoteID(mgt, peerid)) {
-			peerinfo_max = ((data->pl_length - 4) / peerinfo_size);
-			peerinfo_count = utilReadInt32(data->pl_buf);
-			if(peerinfo_count > 0 && peerinfo_count <= peerinfo_max) {
-				r = (abs(cryptoRandInt()) % peerinfo_count); // randomly select a peer
-				for(i=0; i<peerinfo_count; i++) {
-					pos = (4 + (r * peerinfo_size));
-					relaypeerid = utilReadInt32(&data->pl_buf[pos]);
-					memcpy(nodeid.id, &data->pl_buf[(pos + (packet_PEERID_SIZE))], nodeid_SIZE);
-					memcpy(addr.addr, &data->pl_buf[(pos + (packet_PEERID_SIZE + nodeid_SIZE))], peeraddr_SIZE);
-					if(!peeraddrIsInternal(&addr)) { // only accept external PeerAddr
-						nodedbUpdate(&mgt->nodedb, &nodeid, &addr, 1, 0, 0);
-						if(peermgtGetRemoteFlag(mgt, peerid, peermgt_FLAG_RELAY)) { // add relay data
-							peeraddrSetIndirect(&addr, peerid, mgt->data[peerid].conntime, relaypeerid);
-							nodedbUpdate(&mgt->relaydb, &nodeid, &addr, 1, 0, 0);
-						}
-					}
-					r = ((r + 1) % peerinfo_count);
-				}
-				return 1;
-			}
-		}
-	}
+    
+    debug("PEERINFO packet received");
+	if(data->pl_length <= 4) {
+        debugf("PEERINFO packet size is too small: %d bytes", data->pl_length);
+        return 0;
+    }
+    
+    peerid = data->peerid;
+    if(!peermgtIsActiveRemoteID(mgt, peerid)) {
+        debugf("PeerID %d is not active, failed to proceed PEERINFO", peerid);
+        return 0;
+    }
+    
+    peerinfo_max = ((data->pl_length - 4) / peerinfo_size);
+    peerinfo_count = utilReadInt32(data->pl_buf);
+    if(peerinfo_count > 0 && peerinfo_count <= peerinfo_max) {
+        r = (abs(cryptoRandInt()) % peerinfo_count); // randomly select a peer
+        for(i=0; i<peerinfo_count; i++) {
+            pos = (4 + (r * peerinfo_size));
+            relaypeerid = utilReadInt32(&data->pl_buf[pos]);
+            memcpy(nodeid.id, &data->pl_buf[(pos + (packet_PEERID_SIZE))], nodeid_SIZE);
+            memcpy(addr.addr, &data->pl_buf[(pos + (packet_PEERID_SIZE + nodeid_SIZE))], peeraddr_SIZE);
+            if(!peeraddrIsInternal(&addr)) { // only accept external PeerAddr
+                nodedbUpdate(&mgt->nodedb, &nodeid, &addr, 1, 0, 0);
+                if(peermgtGetRemoteFlag(mgt, peerid, peermgt_FLAG_RELAY)) { // add relay data
+                    peeraddrSetIndirect(&addr, peerid, mgt->data[peerid].conntime, relaypeerid);
+                    nodedbUpdate(&mgt->relaydb, &nodeid, &addr, 1, 0, 0);
+                }
+            }
+            r = ((r + 1) % peerinfo_count);
+        }
+        return 1;
+    }
+    
 	return 0;
 }
 
@@ -862,26 +872,31 @@ static int peermgtDecodePacketPeerinfo(struct s_peermgt *mgt, const struct s_pac
 // Decode ping packet
 static int peermgtDecodePacketPing(struct s_peermgt *mgt, const struct s_packet_data *data) {
 	int len = data->pl_length;
-	if(len == peermgt_PINGBUF_SIZE) {
-		memcpy(mgt->rrmsg.msg, data->pl_buf, peermgt_PINGBUF_SIZE);
-		mgt->rrmsgpeerid = data->peerid;
-		mgt->rrmsgtype = packet_PLTYPE_PONG;
-		mgt->rrmsg.len = peermgt_PINGBUF_SIZE;
-		mgt->rrmsgusetargetaddr = 0;
-		return 1;
-	}
-	return 0;
+	if(len != peermgt_PINGBUF_SIZE) {
+        debug("wrong PEERPING packet");
+        return 0;
+    }
+    
+    memcpy(mgt->rrmsg.msg, data->pl_buf, peermgt_PINGBUF_SIZE);
+    mgt->rrmsgpeerid = data->peerid;
+    mgt->rrmsgtype = packet_PLTYPE_PONG;
+    mgt->rrmsg.len = peermgt_PINGBUF_SIZE;
+    mgt->rrmsgusetargetaddr = 0;
+    debugf("PEERPING packet decoded from %d", data->peerid);
+    return 1;
 }
 
 
 // Decode pong packet
 static int peermgtDecodePacketPong(struct s_peermgt *mgt, const struct s_packet_data *data) {
 	int len = data->pl_length;
-	if(len == peermgt_PINGBUF_SIZE) {
-		// content is not checked, any response is acceptable
-		return 1;
-	}
-	return 0;
+	if(len != peermgt_PINGBUF_SIZE) {
+        debugf("wrong size of PEERPONG packet, got %d bytes", data->pl_length);
+        return 0;
+    }
+    
+    // content is not checked, any response is acceptable
+    return 1;
 }
 
 

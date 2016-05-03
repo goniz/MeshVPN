@@ -3,12 +3,15 @@ LIBS+=-lcrypto -lz
 DESTDIR="/usr/local"
 COMMIT=$(shell git log --format='%H' | head -n 1)
 
-all: peervpn
-peervpn: src/encryption/rsa.o src/encryption/crypto.o peervpn.o logging.o
-	$(CC) $(LDFLAGS) peervpn.o logging.o src/encryption/rsa.o src/encryption/crypto.o $(LIBS) -o $@
+objects = src/encryption/rsa.o \
+          src/encryption/crypto.o \
+          src/encryption/dh.o \
+          peervpn.o \
+          logging.o
 
-peervpn.o: peervpn.c
-logging.o: logging.c
+all: peervpn
+peervpn: src/encryption/rsa.o src/encryption/crypto.o src/encryption/dh.o peervpn.o logging.o
+	$(CC) $(LDFLAGS) $(objects) $(LIBS) -o $@
 
 rpm:
 	echo "Building RPM for $(COMMIT)"
@@ -20,8 +23,10 @@ rpm:
 	cp redhat/peervpn.spec redhat/build/SPECS
 	sed -i 's/CURRENT_COMMIT/$(COMMIT)/g' redhat/build/SPECS/peervpn.spec
 	cd redhat/build/SOURCES && spectool -g ../SPECS/peervpn.spec && cd .. && rpmbuild --define "_topdir `pwd`" -ba SPECS/peervpn.spec
+
 install:
 	mkdir -p $(DESTDIR)/sbin
 	install peervpn $(DESTDIR)/sbin/peervpn
+
 clean:
-	rm -f peervpn peervpn.o logging.o src/encryption/*.o
+	rm -f peervpn $(objects)
