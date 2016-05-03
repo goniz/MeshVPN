@@ -26,6 +26,7 @@
 
 // NetID size in bytes.
 #define netid_SIZE 32
+#define NETID_SIZE 32
 
 
 // The NetID structure.

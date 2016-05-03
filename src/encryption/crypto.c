@@ -20,8 +20,8 @@
 #ifndef F_CRYPTO_C
 #define F_CRYPTO_C
 
-#include "../../include/crypto.h"
-#include "../../include/util.h"
+#include "crypto.h"
+#include "util.h"
 
 #include <openssl/evp.h>
 #include <openssl/hmac.h>

@@ -101,6 +101,7 @@ static void peeraddrSetIndirect(struct s_peeraddr *peeraddr, const int relayid, 
 	utilWriteInt32(&peeraddr->addr[20], 0);
 }
 
+#define CREATE_HUMAN_IP(variable) char humanIp[60]; peeraddrToHuman(humanIp, variable);
 /**
  * Copy human readable peer address to buffer
  */

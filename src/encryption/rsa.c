@@ -23,9 +23,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../../include/logging.h"
-#include "../../include/rsa.h"
-#include "../../include/crypto.h"
+#include "logging.h"
+#include "rsa.h"
+#include "crypto.h"
 
 #include <openssl/rand.h>
 #include <openssl/evp.h>

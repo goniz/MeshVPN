@@ -1,16 +1,19 @@
-CFLAGS+=-O2 -DDEBUG -g
+CFLAGS+=-O2 -DDEBUG -g -I ./include
 LIBS+=-lcrypto -lz
+INC_DIR=./include
 DESTDIR="/usr/local"
 COMMIT=$(shell git log --format='%H' | head -n 1)
 
 objects = src/encryption/rsa.o \
           src/encryption/crypto.o \
           src/encryption/dh.o \
+          src/p2p/auth.o \
+          src/p2p/nodeid.o \
           peervpn.o \
           logging.o
 
 all: peervpn
-peervpn: src/encryption/rsa.o src/encryption/crypto.o src/encryption/dh.o peervpn.o logging.o
+peervpn: $(objects)
 	$(CC) $(LDFLAGS) $(objects) $(LIBS) -o $@
 
 rpm:
