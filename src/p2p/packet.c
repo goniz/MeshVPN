@@ -21,69 +21,12 @@
 #define F_PACKET_C
 
 
-#include "../include/crypto.h"
-#include "seq.c"
-#include "util.c"
-
-
-// size of packet header fields in bytes
-#define packet_PEERID_SIZE 4 // peer ID
-#define packet_HMAC_SIZE 32 // hmac that includes sequence number, node ID, pl* fields (pllen, pltype, plopt) and payload
-#define packet_IV_SIZE 16 // IV
-#define packet_SEQ_SIZE seq_SIZE // packet sequence number
-#define packet_PLLEN_SIZE 2 // payload length
-#define packet_PLTYPE_SIZE 1 // payload type
-#define packet_PLOPT_SIZE 1 // payload options
-#define packet_CRHDR_SIZE (packet_SEQ_SIZE + packet_PLLEN_SIZE + packet_PLTYPE_SIZE + packet_PLOPT_SIZE)
-
-
-// position of packet header fields
-#define packet_CRHDR_SEQ_START (0)
-#define packet_CRHDR_PLLEN_START (packet_CRHDR_SEQ_START + packet_SEQ_SIZE)
-#define packet_CRHDR_PLTYPE_START (packet_CRHDR_PLLEN_START + packet_PLLEN_SIZE)
-#define packet_CRHDR_PLOPT_START (packet_CRHDR_PLTYPE_START + packet_PLTYPE_SIZE)
-
-
-// payload types
-#define packet_PLTYPE_USERDATA 0
-#define packet_PLTYPE_USERDATA_FRAGMENT 1
-#define packet_PLTYPE_AUTH 2
-#define packet_PLTYPE_PEERINFO 3
-#define packet_PLTYPE_PING 4
-#define packet_PLTYPE_PONG 5
-#define packet_PLTYPE_RELAY_IN 6
-#define packet_PLTYPE_RELAY_OUT 7
-
-
-// constraints
-#if packet_PEERID_SIZE != 4
-#error invalid packet_PEERID_SIZE
-#endif
-#if packet_SEQ_SIZE != 8
-#error invalid packet_SEQ_SIZE
-#endif
-#if packet_PLLEN_SIZE != 2
-#error invalid packet_PLLEN_SIZE
-#endif
-#if packet_CRHDR_SIZE < (3 * packet_PEERID_SIZE)
-#error invalid packet_CRHDR_SIZE
-#endif
-
-
-// packet data structure
-struct s_packet_data {
-	int peerid;
-	int64_t seq;
-	int pl_length;
-	int pl_type;
-	int pl_options;
-	unsigned char *pl_buf;
-	int pl_buf_size;
-};
-
+#include "crypto.h"
+#include "p2p.h"
+#include "util.h"
 
 // return the peer ID
-static int packetGetPeerID(const unsigned char *pbuf) {
+int packetGetPeerID(const unsigned char *pbuf) {
 	int32_t *scr_peerid = ((int32_t *)pbuf);
 	int32_t ne_peerid = (scr_peerid[0] ^ (scr_peerid[1] ^ scr_peerid[2]));
 	return utilReadInt32((unsigned char *)&ne_peerid);
@@ -91,7 +34,7 @@ static int packetGetPeerID(const unsigned char *pbuf) {
 
 
 // encode packet
-static int packetEncode(unsigned char *pbuf, const int pbuf_size, const struct s_packet_data *data, struct s_crypto *ctx) {
+int packetEncode(unsigned char *pbuf, const int pbuf_size, const struct s_packet_data *data, struct s_crypto *ctx) {
 	unsigned char dec_buf[packet_CRHDR_SIZE + data->pl_buf_size];
 	int32_t *scr_peerid = ((int32_t *)pbuf);
 	int32_t ne_peerid;
@@ -121,7 +64,7 @@ static int packetEncode(unsigned char *pbuf, const int pbuf_size, const struct s
 
 
 // decode packet
-static int packetDecode(struct s_packet_data *data, const unsigned char *pbuf, const int pbuf_size, struct s_crypto *ctx, struct s_seq_state *seqstate) {
+int packetDecode(struct s_packet_data *data, const unsigned char *pbuf, const int pbuf_size, struct s_crypto *ctx, struct s_seq_state *seqstate) {
 	unsigned char dec_buf[pbuf_size];
 	int len;
 

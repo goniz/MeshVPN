@@ -16,12 +16,20 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 #include "logging.h"
-#include "config.c"
 #include "globals.h"
+#include "nodeid.h"
 #include "util.h"
 #include "io.h"
+#include "app.h"
+#include "p2p.h"
 
 #include <string.h>
+#include <signal.h>
+
+#include <openssl/engine.h>
+#include <openssl/evp.h>
+#include <openssl/hmac.h>
+#include <openssl/rand.h>
 
 // handle termination signals
 void sighandler(int sig) {

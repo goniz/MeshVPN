@@ -19,61 +19,20 @@
 #ifndef H_CONFIG
 #define H_CONFIG
 
-#define INITPEERS_MAX 256
+#include "app.h"
 
-struct s_initconfig {
-	char sourceip[CONFPARSER_NAMEBUF_SIZE+1];
-	char sourceport[CONFPARSER_NAMEBUF_SIZE+1];
-	char tapname[CONFPARSER_NAMEBUF_SIZE+1];
-	char userstr[CONFPARSER_NAMEBUF_SIZE+1];
-	char groupstr[CONFPARSER_NAMEBUF_SIZE+1];
-	char chrootstr[CONFPARSER_NAMEBUF_SIZE+1];
-	char networkname[CONFPARSER_NAMEBUF_SIZE+1];
-	char ifconfig4[CONFPARSER_NAMEBUF_SIZE+1];
-	char ifconfig6[CONFPARSER_NAMEBUF_SIZE+1];
-	char upcmd[CONFPARSER_NAMEBUF_SIZE+1];
-    
-    // list of inital peers, we can have several of them active
-	char * initpeers[INITPEERS_MAX];
-    // counter of initial peers
-    int initpeerscount;
-    
-	char engines[CONFPARSER_NAMEBUF_SIZE+1];
-	char password[CONFPARSER_NAMEBUF_SIZE+1];
-	char pidfile[CONFPARSER_NAMEBUF_SIZE+1];
-    char privatekey[CONFPARSER_NAMEBUF_SIZE+1];
-    
-	int password_len;
-	int enablepidfile;
-	int enableindirect;
-	int enablerelay;
-	int enableeth;
-	int enablendpcache;
-	int enablevirtserv;
-	int enableipv4;
-	int enableipv6;
-	int enablenat64clat;
-	int enableprivdrop;
-	int enableseccomp;
-	int enablesyslog;
-	int forceseccomp;
-	int daemonize;
-    int enableconsole;
-	int sockmark;
-};
-
-static void throwError(char *msg) {
+void throwError(char *msg) {
 	if(msg != NULL) printf("error: %s\n",msg);
 	exit(1);
 }
 
-static int parseConfigInt(char *str) {
+int parseConfigInt(char *str) {
 	int n = atoi(str);
 	if(n < 0) return -1;
 	return n;
 }
 
-static int parseConfigBoolean(char *str) {
+int parseConfigBoolean(char *str) {
 	if(strncmp(str,"true",4) == 0) {
 		return 1;
 	}
@@ -97,7 +56,7 @@ static int parseConfigBoolean(char *str) {
 	}
 }
 
-static int parseConfigIsEOLChar(char c) {
+int parseConfigIsEOLChar(char c) {
 	switch(c) {
 		case '#':
 		case ';':
@@ -109,7 +68,7 @@ static int parseConfigIsEOLChar(char c) {
 	}
 }
 
-static int parseConfigLineCheckCommand(char *line, int linelen, const char *cmd, int *vpos) {
+int parseConfigLineCheckCommand(char *line, int linelen, const char *cmd, int *vpos) {
 	int cmdlen = strlen(cmd);
 	if(!(linelen >= cmdlen)) {
 		return 0;
@@ -137,7 +96,7 @@ static int parseConfigLineCheckCommand(char *line, int linelen, const char *cmd,
 	}
 }
 
-static int parseConfigLine(char *line, int len, struct s_initconfig *cs) {
+int parseConfigLine(char *line, int len, struct s_initconfig *cs) {
 	int vpos,a;
 	if(!(len > 0)) {
 		return 1;
@@ -344,7 +303,7 @@ static int parseConfigLine(char *line, int len, struct s_initconfig *cs) {
 	}
 }
 
-static void parseConfigFile(int fd, struct s_initconfig *cs) {
+void parseConfigFile(int fd, struct s_initconfig *cs) {
 	char line[CONFPARSER_LINEBUF_SIZE+1];
 	char c;
 	int linepos = 0;

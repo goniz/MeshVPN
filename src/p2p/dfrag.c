@@ -20,28 +20,11 @@
 #ifndef F_DFRAG_C
 #define F_DFRAG_C
 
-
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-
-
-struct s_dfrag {
-	unsigned char *fragbuf;
-	int *used;
-	int *peerct;
-	int *peerid;
-	int64_t *seq;
-	int *length;
-	int *msglength;
-	int fragbuf_size;
-	int fragbuf_count;
-	int pos;
-};
+#include "p2p.h"
 
 
 // Reset fragment buffer structure.
-static void dfragReset(struct s_dfrag *dfrag) {
+void dfragReset(struct s_dfrag *dfrag) {
 	int i, j;
 	j = dfrag->fragbuf_count;
 	for(i=0; i<j; i++) {
@@ -52,7 +35,7 @@ static void dfragReset(struct s_dfrag *dfrag) {
 
 
 // Returns 1 if the specified message has the specified ID.
-static int dfragIsID(struct s_dfrag *dfrag, const int peerct, const int peerid, const int64_t seq, const int id) {
+int dfragIsID(struct s_dfrag *dfrag, const int peerct, const int peerid, const int64_t seq, const int id) {
 	if(dfrag->used[id] > 0) {
 		if(dfrag->peerct[id] == peerct) {
 			if(dfrag->peerid[id] == peerid) {
@@ -67,7 +50,7 @@ static int dfragIsID(struct s_dfrag *dfrag, const int peerct, const int peerid, 
 
 
 // Return message ID.
-static int dfragGetID(struct s_dfrag *dfrag, const int peerct, const int peerid, const int64_t seq) {
+int dfragGetID(struct s_dfrag *dfrag, const int peerct, const int peerid, const int64_t seq) {
 	int i, j;
 	j = dfrag->fragbuf_count;
 	for(i=0; i<j; i++) {
@@ -80,7 +63,7 @@ static int dfragGetID(struct s_dfrag *dfrag, const int peerct, const int peerid,
 
 
 // Allocate message ID.
-static int dfragAllocateID(struct s_dfrag *dfrag, const int fragment_count) {
+int dfragAllocateID(struct s_dfrag *dfrag, const int fragment_count) {
 	int i;
 	int id;
 	int pos = dfrag->pos;
@@ -114,7 +97,7 @@ static int dfragAllocateID(struct s_dfrag *dfrag, const int fragment_count) {
 
 
 // Clear message.
-static void dfragClear(struct s_dfrag *dfrag, const int id) {
+void dfragClear(struct s_dfrag *dfrag, const int id) {
 	dfrag->used[id] = 0;
 	dfrag->length[id] = 0;
 	dfrag->msglength[id] = 0;
@@ -122,19 +105,19 @@ static void dfragClear(struct s_dfrag *dfrag, const int id) {
 
 
 // Return length of completed message.
-static int dfragLength(struct s_dfrag *dfrag, const int id) {
+int dfragLength(struct s_dfrag *dfrag, const int id) {
 	return dfrag->msglength[id];
 }
 
 
 // Return pointer to message (dfragLength should be called first to get the message length).
-static unsigned char *dfragGet(struct s_dfrag *dfrag, const int id) {
+unsigned char *dfragGet(struct s_dfrag *dfrag, const int id) {
 	return &dfrag->fragbuf[(id * dfrag->fragbuf_size)];
 }
 
 
 // Calculate message length and save result.
-static int dfragCalcLength(struct s_dfrag *dfrag, const int id) {
+int dfragCalcLength(struct s_dfrag *dfrag, const int id) {
 	int i;
 	int len;
 	int fragcount = dfrag->used[id];
@@ -160,7 +143,7 @@ static int dfragCalcLength(struct s_dfrag *dfrag, const int id) {
 
 
 // Combine fragments to a message. Returns an ID if the message is completed or -1 in every other case.
-static int dfragAssemble(struct s_dfrag *dfrag, const int peerct, const int peerid, const int64_t seq, const unsigned char *fragment, const int fragment_len, const int fragment_pos, const int fragment_count) {
+int dfragAssemble(struct s_dfrag *dfrag, const int peerct, const int peerid, const int64_t seq, const unsigned char *fragment, const int fragment_len, const int fragment_pos, const int fragment_count) {
 	int id;
 
 	// check arguments
@@ -199,7 +182,7 @@ static int dfragAssemble(struct s_dfrag *dfrag, const int peerct, const int peer
 
 
 // Create fragment buffer structure.
-static int dfragCreate(struct s_dfrag *dfrag, const int size, const int count) {
+int dfragCreate(struct s_dfrag *dfrag, const int size, const int count) {
 	unsigned char *fragbuf_mem = NULL;
 	int *used_mem = NULL;
 	int *peerct_mem = NULL;
@@ -252,7 +235,7 @@ static int dfragCreate(struct s_dfrag *dfrag, const int size, const int count) {
 
 
 // Destroy fragment buffer structure.
-static void dfragDestroy(struct s_dfrag *dfrag) {
+void dfragDestroy(struct s_dfrag *dfrag) {
 	free(dfrag->msglength);
 	free(dfrag->length);
 	free(dfrag->seq);

@@ -20,23 +20,12 @@
 #ifndef F_IDSP_C
 #define F_IDSP_C
 
-#include "../include/logging.h"
+#include "logging.h"
 #include <stdlib.h>
+#include "p2p.h"
 
 
-#define idsp_ALIGN_BOUNDARY 16
-
-
-struct s_idsp {
-	int *idfwd;
-	int *idlist;
-	int count;
-	int used;
-	int iter;
-};
-
-
-static void idspReset(struct s_idsp *idsp) {
+void idspReset(struct s_idsp *idsp) {
 	int i;
 	for(i=0; i<idsp->count; i++) {
 		idsp->idfwd[i] = -1;
@@ -47,7 +36,7 @@ static void idspReset(struct s_idsp *idsp) {
 }
 
 
-static int idspMemSize(const int size) {
+int idspMemSize(const int size) {
 	const int align_boundary = idsp_ALIGN_BOUNDARY;
 	int memsize;
 	memsize = 0;
@@ -58,7 +47,7 @@ static int idspMemSize(const int size) {
 }
 
 
-static int idspMemInit(struct s_idsp *idsp, const int mem_size, const int size) {
+int idspMemInit(struct s_idsp *idsp, const int mem_size, const int size) {
 	const int align_boundary = idsp_ALIGN_BOUNDARY;
 	const int idfwd_mem_offset = ((((sizeof(struct s_idsp)) + (align_boundary - 1)) / align_boundary) * align_boundary);
 	const int idlist_mem_offset = idfwd_mem_offset + ((((sizeof(int) * size) + (align_boundary - 1)) / align_boundary) * align_boundary);
@@ -78,7 +67,7 @@ static int idspMemInit(struct s_idsp *idsp, const int mem_size, const int size) 
 }
 
 
-static int idspCreate(struct s_idsp *idsp, const int size) {
+int idspCreate(struct s_idsp *idsp, const int size) {
 	int *idfwd_mem;
 	int *idlist_mem;
 	idfwd_mem = NULL;
@@ -101,7 +90,7 @@ static int idspCreate(struct s_idsp *idsp, const int size) {
 }
 
 
-static int idspNextN(struct s_idsp *idsp, const int start) {
+int idspNextN(struct s_idsp *idsp, const int start) {
 	int nextid;
 	int iter;
 	int used;
@@ -125,7 +114,7 @@ static int idspNextN(struct s_idsp *idsp, const int start) {
 }
 
 
-static int idspNext(struct s_idsp *idsp) {
+int idspNext(struct s_idsp *idsp) {
 	int iter;
 	int used;
 	iter = idsp->iter;
@@ -139,7 +128,7 @@ static int idspNext(struct s_idsp *idsp) {
 }
 
 
-static int idspNew(struct s_idsp *idsp) {
+int idspNew(struct s_idsp *idsp) {
 	int new_id;
 	int new_pos;
 	if(idsp->used < idsp->count) {
@@ -154,7 +143,7 @@ static int idspNew(struct s_idsp *idsp) {
 }
 
 
-static int idspGetPos(struct s_idsp *idsp, const int id) {
+int idspGetPos(struct s_idsp *idsp, const int id) {
 	if((id >= 0) && (id < idsp->count)) {
 		return idsp->idfwd[id];
 	}
@@ -164,7 +153,7 @@ static int idspGetPos(struct s_idsp *idsp, const int id) {
 }
 
 
-static void idspDelete(struct s_idsp *idsp, const int id) {
+void idspDelete(struct s_idsp *idsp, const int id) {
 	int pos;
 	int swp_id;
 	int swp_pos;
@@ -182,22 +171,22 @@ static void idspDelete(struct s_idsp *idsp, const int id) {
 }
 
 
-static int idspIsValid(struct s_idsp *idsp, const int id) {
+int idspIsValid(struct s_idsp *idsp, const int id) {
 	return (!(idspGetPos(idsp, id) < 0));
 }
 
 
-static int idspUsedCount(struct s_idsp *idsp) {
+int idspUsedCount(struct s_idsp *idsp) {
 	return idsp->used;
 }
 
 
-static int idspSize(struct s_idsp *idsp) {
+int idspSize(struct s_idsp *idsp) {
 	return idsp->count;
 }
 
 
-static void idspDestroy(struct s_idsp *idsp) {
+void idspDestroy(struct s_idsp *idsp) {
 	idsp->used = 0;
 	idsp->count = 0;
 	free(idsp->idlist);

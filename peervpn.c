@@ -22,21 +22,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <openssl/engine.h>
-
-#include "ethernet/switch.c"
-#include "ethernet/ndp6.c"
-#include "ethernet/virtserv.c"
-#include "libp2psec/p2psec.c"
-#include "platform/io.c"
-#include "platform/ifconfig.c"
 #include "include/globals.h"
-#include "include/rsa.h"
-#include "console.ic"
-#include "mainloop.c"
-#include "config.c"
+
+#include "rsa.h"
+#include "app.h"
 #include "pwd.ic"
-#include "init.c"
-#include "include/logging.h"
+#include "logging.h"
 
 
 // commandline parser

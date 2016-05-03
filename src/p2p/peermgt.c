@@ -20,137 +20,12 @@
 #ifndef F_PEERMGT_C
 #define F_PEERMGT_C
 
-
-#include "nodedb.c"
-#include "authmgt.c"
-#include "packet.c"
-#include "dfrag.c"
 #include <time.h>
-
-
-// Minimum message size supported (without fragmentation).
-#define peermgt_MSGSIZE_MIN 1024
-
-
-// Maximum message size supported (with or without fragmentation).
-#define peermgt_MSGSIZE_MAX 8192
-
-
-// Ping buffer size.
-#define peermgt_PINGBUF_SIZE 64
-
-
-// Number of fragment buffers.
-#define peermgt_FRAGBUF_COUNT 64
-
-
-// Maximum packet decode recursion depth.
-#define peermgt_DECODE_RECURSION_MAX_DEPTH 2
-
-
-// NodeDB settings.
-#define peermgt_NODEDB_NUM_PEERADDRS 8
-#define peermgt_RELAYDB_NUM_PEERADDRS 4
-
-
-// States.
-#define peermgt_STATE_INVALID 0
-#define peermgt_STATE_AUTHED 1
-#define peermgt_STATE_COMPLETE 2
-
-
-// Timeouts.
-#define peermgt_RECV_TIMEOUT 100
-#define peermgt_KEEPALIVE_INTERVAL 10
-#define peermgt_PEERINFO_INTERVAL 60
-#define peermgt_NEWCONNECT_MAX_LASTSEEN 604800
-#define peermgt_NEWCONNECT_MIN_LASTCONNTRY 60
-#define peermgt_NEWCONNECT_RELAY_MAX_LASTSEEN 300
-
-
-// Flags.
-#define peermgt_FLAG_USERDATA 0x0001
-#define peermgt_FLAG_RELAY 0x0002
-#define peermgt_FLAG_F03 0x0004
-#define peermgt_FLAG_F04 0x0008
-#define peermgt_FLAG_F05 0x0010
-#define peermgt_FLAG_F06 0x0020
-#define peermgt_FLAG_F07 0x0040
-#define peermgt_FLAG_F08 0x0080
-#define peermgt_FLAG_F09 0x0100
-#define peermgt_FLAG_F10 0x0200
-#define peermgt_FLAG_F11 0x0400
-#define peermgt_FLAG_F12 0x0800
-#define peermgt_FLAG_F13 0x1000
-#define peermgt_FLAG_F14 0x2000
-#define peermgt_FLAG_F15 0x4000
-#define peermgt_FLAG_F16 0x8000
-
-
-// Constraints.
-#if auth_MAXMSGSIZE > peermgt_MSGSIZE_MIN
-#error auth_MAXMSGSIZE too big
-#endif
-#if peermgt_PINGBUF_SIZE > peermgt_MSGSIZE_MIN
-#error peermgt_PINGBUF_SIZE too big
-#endif
-
-
-// The peer manager data structure.
-struct s_peermgt_data {
-	int conntime;
-	int lastrecv;
-	int lastsend;
-	int lastpeerinfo;
-	int lastpeerinfosendpeerid;
-	struct s_peeraddr remoteaddr;
-	int remoteflags;
-	int remoteid;
-	int64_t remoteseq;
-	struct s_seq_state seq;
-	int state;
-};
-
-
-// The peer manager structure.
-struct s_peermgt {
-	struct s_netid netid;
-	struct s_map map;
-	struct s_nodedb nodedb;
-	struct s_nodedb relaydb;
-	struct s_authmgt authmgt;
-	struct s_dfrag dfrag;
-	struct s_nodekey *nodekey;
-	struct s_peermgt_data *data;
-	struct s_crypto *ctx;
-	int localflags;
-	unsigned char msgbuf[peermgt_MSGSIZE_MAX];
-	unsigned char relaymsgbuf[peermgt_MSGSIZE_MAX];
-	unsigned char rrmsgbuf[peermgt_MSGSIZE_MAX];
-	int msgsize;
-	int msgpeerid;
-	struct s_msg outmsg;
-	int outmsgpeerid;
-	int outmsgbroadcast;
-	int outmsgbroadcastcount;
-	struct s_msg rrmsg;
-	int rrmsgpeerid;
-	int rrmsgtype;
-	int rrmsgusetargetaddr;
-	struct s_peeraddr rrmsgtargetaddr;
-	int loopback;
-	int fragmentation;
-	int fragoutpeerid;
-	int fragoutcount;
-	int fragoutsize;
-	int fragoutpos;
-	int lastconntry;
-	int tinit;
-};
+#include "p2p.h"
 
 
 // Return number of connected peers.
-static int peermgtPeerCount(struct s_peermgt *mgt) {
+int peermgtPeerCount(struct s_peermgt *mgt) {
 	int n;
 	n = (mapGetKeyCount(&mgt->map) - 1);
 	return n;
@@ -158,7 +33,7 @@ static int peermgtPeerCount(struct s_peermgt *mgt) {
 
 
 // Check if PeerID is valid.
-static int peermgtIsValidID(struct s_peermgt *mgt, const int peerid) {
+int peermgtIsValidID(struct s_peermgt *mgt, const int peerid) {
 	if(!(peerid < 0)) {
 		if(peerid < mapGetMapSize(&mgt->map)) {
 			if(mapIsValidID(&mgt->map, peerid)) {
@@ -171,7 +46,7 @@ static int peermgtIsValidID(struct s_peermgt *mgt, const int peerid) {
 
 
 // Check if PeerID is active (ready to send/recv data).
-static int peermgtIsActiveID(struct s_peermgt *mgt, const int peerid) {
+int peermgtIsActiveID(struct s_peermgt *mgt, const int peerid) {
 	if(peermgtIsValidID(mgt, peerid)) {
 		if(mgt->data[peerid].state == peermgt_STATE_COMPLETE) {
 			return 1;
@@ -182,7 +57,7 @@ static int peermgtIsActiveID(struct s_peermgt *mgt, const int peerid) {
 
 
 // Check if PeerID is active and matches the specified connection time.
-static int peermgtIsActiveIDCT(struct s_peermgt *mgt, const int peerid, const int conntime) {
+int peermgtIsActiveIDCT(struct s_peermgt *mgt, const int peerid, const int conntime) {
 	if(peermgtIsActiveID(mgt, peerid)) {
 		if(mgt->data[peerid].conntime == conntime) {
 			return 1;
@@ -198,19 +73,19 @@ static int peermgtIsActiveIDCT(struct s_peermgt *mgt, const int peerid, const in
 
 
 // Check if PeerID is active and remote (> 0).
-static int peermgtIsActiveRemoteID(struct s_peermgt *mgt, const int peerid) {
+int peermgtIsActiveRemoteID(struct s_peermgt *mgt, const int peerid) {
 	return ((peerid > 0) && (peermgtIsActiveID(mgt, peerid)));
 }
 
 
 // Check if PeerID is active, remote (> 0) and matches the specified connection time.
-static int peermgtIsActiveRemoteIDCT(struct s_peermgt *mgt, const int peerid, const int conntime) {
+int peermgtIsActiveRemoteIDCT(struct s_peermgt *mgt, const int peerid, const int conntime) {
 	return ((peerid > 0) && (peermgtIsActiveIDCT(mgt, peerid, conntime)));
 }
 
 
 // Check if indirect PeerAddr is valid.
-static int peermgtIsValidIndirectPeerAddr(struct s_peermgt *mgt, const struct s_peeraddr *addr) {
+int peermgtIsValidIndirectPeerAddr(struct s_peermgt *mgt, const struct s_peeraddr *addr) {
 	int relayid;
 	int relayct;
 	if(peeraddrGetIndirect(addr, &relayid, &relayct, NULL)) {
@@ -228,25 +103,25 @@ static int peermgtIsValidIndirectPeerAddr(struct s_peermgt *mgt, const struct s_
 
 
 // Return the next valid PeerID.
-static int peermgtGetNextID(struct s_peermgt *mgt) {
+int peermgtGetNextID(struct s_peermgt *mgt) {
 	return mapGetNextKeyID(&mgt->map);
 }
 
 
 // Return the next valid PeerID, starting from specified ID.
-static int peermgtGetNextIDN(struct s_peermgt *mgt, const int start) {
+int peermgtGetNextIDN(struct s_peermgt *mgt, const int start) {
 	return mapGetNextKeyIDN(&mgt->map, start);
 }
 
 
 // Get PeerID of NodeID. Returns -1 if it is not found.
-static int peermgtGetID(struct s_peermgt *mgt, const struct s_nodeid *nodeid) {
+int peermgtGetID(struct s_peermgt *mgt, const struct s_nodeid *nodeid) {
 	return mapGetKeyID(&mgt->map, nodeid->id);
 }
 
 
 // Returns PeerID if active PeerID + PeerCT or NodeID is specified. Returns -1 if it is not found or both IDs are specified and don't match the same node.
-static int peermgtGetActiveID(struct s_peermgt *mgt, const struct s_nodeid *nodeid, const int peerid, const int peerct) {
+int peermgtGetActiveID(struct s_peermgt *mgt, const struct s_nodeid *nodeid, const int peerid, const int peerct) {
 	int outpeerid = -1;
 
 	if(nodeid != NULL) {
@@ -272,7 +147,7 @@ static int peermgtGetActiveID(struct s_peermgt *mgt, const struct s_nodeid *node
 
 
 // Get NodeID of PeerID. Returns 1 on success.
-static int peermgtGetNodeID(struct s_peermgt *mgt, struct s_nodeid *nodeid, const int peerid) {
+int peermgtGetNodeID(struct s_peermgt *mgt, struct s_nodeid *nodeid, const int peerid) {
 	unsigned char *ret;
 	if(peermgtIsValidID(mgt, peerid)) {
 		ret = mapGetKeyByID(&mgt->map, peerid);
@@ -286,7 +161,7 @@ static int peermgtGetNodeID(struct s_peermgt *mgt, struct s_nodeid *nodeid, cons
 
 
 // Reset the data for an ID.
-static void peermgtResetID(struct s_peermgt *mgt, const int peerid) {
+void peermgtResetID(struct s_peermgt *mgt, const int peerid) {
 	mgt->data[peerid].state = peermgt_STATE_INVALID;
 	memset(mgt->data[peerid].remoteaddr.addr, 0, peeraddr_SIZE);
 	cryptoSetKeysRandom(&mgt->ctx[peerid], 1);
@@ -294,7 +169,7 @@ static void peermgtResetID(struct s_peermgt *mgt, const int peerid) {
 
 
 // Register new peer.
-static int peermgtNew(struct s_peermgt *mgt, const struct s_nodeid *nodeid, const struct s_peeraddr *addr) {
+int peermgtNew(struct s_peermgt *mgt, const struct s_nodeid *nodeid, const struct s_peeraddr *addr) {
 	int tnow = utilGetClock();
 	int peerid = mapAddReturnID(&mgt->map, nodeid->id, &tnow);
 	if(!(peerid < 0)) {
@@ -314,7 +189,7 @@ static int peermgtNew(struct s_peermgt *mgt, const struct s_nodeid *nodeid, cons
 
 
 // Unregister a peer using its NodeID.
-static void peermgtDelete(struct s_peermgt *mgt, const struct s_nodeid *nodeid) {
+void peermgtDelete(struct s_peermgt *mgt, const struct s_nodeid *nodeid) {
 	int peerid = peermgtGetID(mgt, nodeid);
 	if(peerid > 0) { // don't allow special ID 0 to be deleted.
 		mapRemove(&mgt->map, nodeid->id);
@@ -324,7 +199,7 @@ static void peermgtDelete(struct s_peermgt *mgt, const struct s_nodeid *nodeid) 
 
 
 // Unregister a peer using its ID.
-static void peermgtDeleteID(struct s_peermgt *mgt, const int peerid) {
+void peermgtDeleteID(struct s_peermgt *mgt, const int peerid) {
 	struct s_nodeid nodeid;
 	if(peerid > 0 && peermgtGetNodeID(mgt, &nodeid, peerid)) {
 		peermgtDelete(mgt, &nodeid);
@@ -333,7 +208,7 @@ static void peermgtDeleteID(struct s_peermgt *mgt, const int peerid) {
 
 
 // Connect to a new peer.
-static int peermgtConnect(struct s_peermgt *mgt, const struct s_peeraddr *remote_addr) {
+int peermgtConnect(struct s_peermgt *mgt, const struct s_peeraddr *remote_addr) {
 	if(remote_addr == NULL) {
         debug("failed to connect tot peer, remote_addr is NULL");
         return 0;
@@ -358,7 +233,7 @@ static int peermgtConnect(struct s_peermgt *mgt, const struct s_peeraddr *remote
 
 
 // Enable/Disable loopback messages.
-static void peermgtSetLoopback(struct s_peermgt *mgt, const int enable) {
+void peermgtSetLoopback(struct s_peermgt *mgt, const int enable) {
 	if(enable) {
 		mgt->loopback = 1;
 	}
@@ -369,25 +244,25 @@ static void peermgtSetLoopback(struct s_peermgt *mgt, const int enable) {
 
 
 // Enable/disable fastauth (ignore send delay after auth status change).
-static void peermgtSetFastauth(struct s_peermgt *mgt, const int enable) {
+void peermgtSetFastauth(struct s_peermgt *mgt, const int enable) {
 	authmgtSetFastauth(&mgt->authmgt, enable);
 }
 
 
 // Enable/disable packet fragmentation.
-static void peermgtSetFragmentation(struct s_peermgt *mgt, const int enable) {
+void peermgtSetFragmentation(struct s_peermgt *mgt, const int enable) {
 	mgt->fragmentation = (enable) ? 1 : 0;
 }
 
 
 // Set flags.
-static void peermgtSetFlags(struct s_peermgt *mgt, const int flags) {
+void peermgtSetFlags(struct s_peermgt *mgt, const int flags) {
 	mgt->localflags = flags;
 }
 
 
 // Get single flag.
-static int peermgtGetFlag(struct s_peermgt *mgt, const int flag) {
+int peermgtGetFlag(struct s_peermgt *mgt, const int flag) {
 	int f;
 	f = (mgt->localflags & flag);
 	return (f != 0);
@@ -395,7 +270,7 @@ static int peermgtGetFlag(struct s_peermgt *mgt, const int flag) {
 
 
 // Get single remote flag.
-static int peermgtGetRemoteFlag(struct s_peermgt *mgt, const int peerid, const int flag) {
+int peermgtGetRemoteFlag(struct s_peermgt *mgt, const int peerid, const int flag) {
 	int f;
 	f = (mgt->data[peerid].remoteflags & flag);
 	return (f != 0);
@@ -403,7 +278,7 @@ static int peermgtGetRemoteFlag(struct s_peermgt *mgt, const int peerid, const i
 
 
 // Generate peerinfo packet.
-static void peermgtGenPacketPeerinfo(struct s_packet_data *data, struct s_peermgt *mgt, const int peerid) {
+void peermgtGenPacketPeerinfo(struct s_packet_data *data, struct s_peermgt *mgt, const int peerid) {
 	const int peerinfo_size = (packet_PEERID_SIZE + nodeid_SIZE + peeraddr_SIZE);
 	int peerinfo_max = mapGetKeyCount(&mgt->map);
 	int peerinfo_count;
@@ -445,7 +320,7 @@ static void peermgtGenPacketPeerinfo(struct s_packet_data *data, struct s_peermg
 
 
 // Send ping to PeerAddr. Return 1 if successful.
-static int peermgtSendPingToAddr(struct s_peermgt *mgt, const struct s_nodeid *tonodeid, const int topeerid, const int topeerct, const struct s_peeraddr *peeraddr) {
+int peermgtSendPingToAddr(struct s_peermgt *mgt, const struct s_nodeid *tonodeid, const int topeerid, const int topeerct, const struct s_peeraddr *peeraddr) {
 	int outpeerid;
 	unsigned char pingbuf[peermgt_PINGBUF_SIZE];
 
@@ -468,7 +343,7 @@ static int peermgtSendPingToAddr(struct s_peermgt *mgt, const struct s_nodeid *t
 
 
 // Generate next peer manager packet. Returns length if successful.
-static int peermgtGetNextPacketGen(struct s_peermgt *mgt, unsigned char *pbuf, const int pbuf_size, const int tnow, struct s_peeraddr *target) {
+int peermgtGetNextPacketGen(struct s_peermgt *mgt, unsigned char *pbuf, const int pbuf_size, const int tnow, struct s_peeraddr *target) {
 	int used = mapGetKeyCount(&mgt->map);
 	int len;
 	int outlen;
@@ -700,7 +575,7 @@ static int peermgtGetNextPacketGen(struct s_peermgt *mgt, unsigned char *pbuf, c
 
 
 // Get next peer manager packet. Also encapsulates packets for relaying if necessary. Returns length if successful.
-static int peermgtGetNextPacket(struct s_peermgt *mgt, unsigned char *pbuf, const int pbuf_size, struct s_peeraddr *target) {
+int peermgtGetNextPacket(struct s_peermgt *mgt, unsigned char *pbuf, const int pbuf_size, struct s_peeraddr *target) {
 	int tnow;
 	int outlen;
 	int relayid;
@@ -762,7 +637,7 @@ static int peermgtGetNextPacket(struct s_peermgt *mgt, unsigned char *pbuf, cons
 
 
 // Decode auth packet
-static int peermgtDecodePacketAuth(struct s_peermgt *mgt, const struct s_packet_data *data, const struct s_peeraddr *source_addr) {
+int peermgtDecodePacketAuth(struct s_peermgt *mgt, const struct s_packet_data *data, const struct s_peeraddr *source_addr) {
 	int tnow = utilGetClock();
 	struct s_authmgt *authmgt = &mgt->authmgt;
 	struct s_nodeid peer_nodeid;
@@ -823,7 +698,7 @@ static int peermgtDecodePacketAuth(struct s_peermgt *mgt, const struct s_packet_
 
 
 // Decode peerinfo packet
-static int peermgtDecodePacketPeerinfo(struct s_peermgt *mgt, const struct s_packet_data *data) {
+int peermgtDecodePacketPeerinfo(struct s_peermgt *mgt, const struct s_packet_data *data) {
 	const int peerinfo_size = (packet_PEERID_SIZE + nodeid_SIZE + peeraddr_SIZE);
 	struct s_nodeid nodeid;
 	struct s_peeraddr addr;
@@ -873,7 +748,7 @@ static int peermgtDecodePacketPeerinfo(struct s_peermgt *mgt, const struct s_pac
 
 
 // Decode ping packet
-static int peermgtDecodePacketPing(struct s_peermgt *mgt, const struct s_packet_data *data) {
+int peermgtDecodePacketPing(struct s_peermgt *mgt, const struct s_packet_data *data) {
 	int len = data->pl_length;
 	if(len != peermgt_PINGBUF_SIZE) {
         debug("wrong PEERPING packet");
@@ -891,7 +766,7 @@ static int peermgtDecodePacketPing(struct s_peermgt *mgt, const struct s_packet_
 
 
 // Decode pong packet
-static int peermgtDecodePacketPong(struct s_peermgt *mgt, const struct s_packet_data *data) {
+int peermgtDecodePacketPong(struct s_peermgt *mgt, const struct s_packet_data *data) {
 	int len = data->pl_length;
 	if(len != peermgt_PINGBUF_SIZE) {
         debugf("wrong size of PEERPONG packet, got %d bytes", data->pl_length);
@@ -904,7 +779,7 @@ static int peermgtDecodePacketPong(struct s_peermgt *mgt, const struct s_packet_
 
 
 // Decode relay-in packet
-static int peermgtDecodePacketRelayIn(struct s_peermgt *mgt, const struct s_packet_data *data) {
+int peermgtDecodePacketRelayIn(struct s_peermgt *mgt, const struct s_packet_data *data) {
 	int targetpeerid;
 	int len = data->pl_length;
 
@@ -926,7 +801,7 @@ static int peermgtDecodePacketRelayIn(struct s_peermgt *mgt, const struct s_pack
 
 
 // Decode fragmented packet
-static int peermgtDecodeUserdataFragment(struct s_peermgt *mgt, struct s_packet_data *data) {
+int peermgtDecodeUserdataFragment(struct s_peermgt *mgt, struct s_packet_data *data) {
 	int fragcount = (data->pl_options >> 4);
 	int fragpos = (data->pl_options & 0x0F);
 	int64_t fragseq = (data->seq - (int64_t)fragpos);
@@ -954,7 +829,7 @@ static int peermgtDecodeUserdataFragment(struct s_peermgt *mgt, struct s_packet_
 
 
 // Decode input packet recursively. Decapsulates relayed packets if necessary.
-static int peermgtDecodePacketRecursive(struct s_peermgt *mgt, const unsigned char *packet, const int packet_len, const struct s_peeraddr *source_addr, const int tnow, const int depth) {
+int peermgtDecodePacketRecursive(struct s_peermgt *mgt, const unsigned char *packet, const int packet_len, const struct s_peeraddr *source_addr, const int tnow, const int depth) {
 	int ret;
 	int peerid;
 	struct s_packet_data data = { .pl_buf_size = peermgt_MSGSIZE_MAX, .pl_buf = mgt->msgbuf };
@@ -1053,7 +928,7 @@ static int peermgtDecodePacketRecursive(struct s_peermgt *mgt, const unsigned ch
 
 
 // Decode input packet. Returns 1 on success.
-static int peermgtDecodePacket(struct s_peermgt *mgt, const unsigned char *packet, const int packet_len, const struct s_peeraddr *source_addr) {
+int peermgtDecodePacket(struct s_peermgt *mgt, const unsigned char *packet, const int packet_len, const struct s_peeraddr *source_addr) {
 	int tnow;
 	tnow = utilGetClock();
 	return peermgtDecodePacketRecursive(mgt, packet, packet_len, source_addr, tnow, 0);
@@ -1061,7 +936,7 @@ static int peermgtDecodePacket(struct s_peermgt *mgt, const unsigned char *packe
 
 
 // Return received user data. Return 1 if successful.
-static int peermgtRecvUserdata(struct s_peermgt *mgt, struct s_msg *recvmsg, struct s_nodeid *fromnodeid, int *frompeerid, int *frompeerct) {
+int peermgtRecvUserdata(struct s_peermgt *mgt, struct s_msg *recvmsg, struct s_nodeid *fromnodeid, int *frompeerid, int *frompeerct) {
 	if((mgt->msgsize > 0) && (recvmsg != NULL)) {
 		recvmsg->msg = mgt->msgbuf;
 		recvmsg->len = mgt->msgsize;
@@ -1085,7 +960,7 @@ static int peermgtRecvUserdata(struct s_peermgt *mgt, struct s_msg *recvmsg, str
 
 
 // Send user data. Return 1 if successful.
-static int peermgtSendUserdata(struct s_peermgt *mgt, const struct s_msg *sendmsg, const struct s_nodeid *tonodeid, const int topeerid, const int topeerct) {
+int peermgtSendUserdata(struct s_peermgt *mgt, const struct s_msg *sendmsg, const struct s_nodeid *tonodeid, const int topeerid, const int topeerct) {
 	int outpeerid;
 
 	mgt->outmsgbroadcast = 0;
@@ -1118,7 +993,7 @@ static int peermgtSendUserdata(struct s_peermgt *mgt, const struct s_msg *sendms
 
 
 // Send user data to all connected peers. Return 1 if successful.
-static int peermgtSendBroadcastUserdata(struct s_peermgt *mgt, const struct s_msg *sendmsg) {
+int peermgtSendBroadcastUserdata(struct s_peermgt *mgt, const struct s_msg *sendmsg) {
 	mgt->outmsgbroadcast = 0;
 	mgt->outmsg.len = 0;
 	if(sendmsg != NULL) {
@@ -1136,19 +1011,19 @@ static int peermgtSendBroadcastUserdata(struct s_peermgt *mgt, const struct s_ms
 
 
 // Set NetID from network name.
-static int peermgtSetNetID(struct s_peermgt *mgt, const char *netname, const int netname_len) {
+int peermgtSetNetID(struct s_peermgt *mgt, const char *netname, const int netname_len) {
 	return netidSet(&mgt->netid, netname, netname_len);
 }
 
 
 // Set shared group password.
-static int peermgtSetPassword(struct s_peermgt *mgt, const char *password, const int password_len) {
+int peermgtSetPassword(struct s_peermgt *mgt, const char *password, const int password_len) {
 	return cryptoSetSessionKeysFromPassword(&mgt->ctx[0], (const unsigned char *)password, password_len, crypto_AES256, crypto_SHA256);
 }
 
 
 // Initialize peer manager object.
-static int peermgtInit(struct s_peermgt *mgt) {
+int peermgtInit(struct s_peermgt *mgt) {
 	const char *defaultpw = "default";
 	int tnow;
 	int i;
@@ -1198,14 +1073,14 @@ static int peermgtInit(struct s_peermgt *mgt) {
 
 
 // Return peer manager uptime in seconds.
-static int peermgtUptime(struct s_peermgt *mgt) {
+int peermgtUptime(struct s_peermgt *mgt) {
 	int uptime = utilGetClock() - mgt->tinit;
 	return uptime;
 }
 
 
 // Generate peer manager status report.
-static void peermgtStatus(struct s_peermgt *mgt, char *report, const int report_len) {
+void peermgtStatus(struct s_peermgt *mgt, char *report, const int report_len) {
 	int tnow = utilGetClock();
 	int pos = 0;
 	int size = mapGetMapSize(&mgt->map);
@@ -1272,7 +1147,7 @@ static void peermgtStatus(struct s_peermgt *mgt, char *report, const int report_
 
 // Create peer manager object.
 // @NOTE: i'm not going to clean resources during failed init because whole app will break down if something goes wrong
-static int peermgtCreate(struct s_peermgt *mgt, const int peer_slots, const int auth_slots, struct s_nodekey *local_nodekey, struct s_dh_state *dhstate) {
+int peermgtCreate(struct s_peermgt *mgt, const int peer_slots, const int auth_slots, struct s_nodekey *local_nodekey, struct s_dh_state *dhstate) {
 	const char *defaultid = "default";
 	struct s_peermgt_data *data_mem;
 	struct s_crypto *ctx_mem;
@@ -1335,7 +1210,7 @@ static int peermgtCreate(struct s_peermgt *mgt, const int peer_slots, const int 
 
 
 // Destroy peer manager object.
-static void peermgtDestroy(struct s_peermgt *mgt) {
+void peermgtDestroy(struct s_peermgt *mgt) {
 	int size = mapGetMapSize(&mgt->map);
 	mapDestroy(&mgt->map);
 	nodedbDestroy(&mgt->nodedb);

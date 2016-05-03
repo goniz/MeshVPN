@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2012 by Tobias Volk                                     *
+ *   Copyright (C) 2014 by Tobias Volk                                     *
  *   mail@tobiasvolk.de                                                    *
  *                                                                         *
  *   This program is free software: you can redistribute it and/or modify  *
@@ -17,28 +17,31 @@
  ***************************************************************************/
 
 
-#ifndef F_NETID_C
-#define F_NETID_C
+#ifndef F_CHECKSUM_C
+#define F_CHECKSUM_C
 
+#include "ethernet.h"
 
-#include "../include/crypto.h"
-
-
-// NetID size in bytes.
-#define netid_SIZE 32
-#define NETID_SIZE 32
-
-
-// The NetID structure.
-struct s_netid {
-	unsigned char id[netid_SIZE];
-};
-
-
-static int netidSet(struct s_netid *netid, const char *netname, const int netname_len) {
-	memset(netid->id, 0, netid_SIZE);
-	return cryptoCalculateSHA256(netid->id, netid_SIZE, (unsigned char *)netname, netname_len);
+// Zeroes the checksum.
+void checksumZero(struct s_checksum *cs) {
+	cs->checksum = 0;
 }
 
 
-#endif // F_NETID_C
+// Adds 16 bit to the checksum.
+void checksumAdd(struct s_checksum *cs, const uint16_t x) {
+	cs->checksum += x;
+}
+
+
+// Get checksum
+uint16_t checksumGet(struct s_checksum *cs) {
+	uint16_t ret;
+	cs->checksum = ((cs->checksum & 0xFFFF) + (cs->checksum >> 16));
+	cs->checksum = ((cs->checksum & 0xFFFF) + (cs->checksum >> 16));
+	ret = ~(cs->checksum);
+	return ret;
+}
+
+
+#endif // F_CHECKSUM_C

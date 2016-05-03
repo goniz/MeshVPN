@@ -23,43 +23,24 @@
 #include "logging.h"
 
 #include "auth.h"
-#include "peeraddr.c"
-#include "idsp.c"
-
-// Timeouts.
-#define authmgt_RECV_TIMEOUT 30
-#define authmgt_RESEND_TIMEOUT 3
-
-#define AUTHMGT_RECV_TIMEOUT 30
-#define AUTHMGT_RESEND_TIMEOUT 3
-
-// The auth manager structure.
-struct s_authmgt {
-	struct s_idsp idsp;
-	struct s_auth_state *authstate;
-	struct s_peeraddr *peeraddr;
-	int *lastrecv;
-	int *lastsend;
-	int fastauth;
-	int current_authed_id;
-	int current_completed_id;
-};
+#include "idsp.h"
+#include "p2p.h"
 
 
 // Return number of auth slots.
-static int authmgtSlotCount(struct s_authmgt *mgt) {
+int authmgtSlotCount(struct s_authmgt *mgt) {
 	return idspSize(&mgt->idsp);
 }
 
 
 // Return number of used auth slots.
-static int authmgtUsedSlotCount(struct s_authmgt *mgt) {
+int authmgtUsedSlotCount(struct s_authmgt *mgt) {
 	return idspUsedCount(&mgt->idsp);	
 }
 
 
 // Create new auth session. Returns ID of session if successful.
-static int authmgtNew(struct s_authmgt *mgt, const struct s_peeraddr *peeraddr) {
+int authmgtNew(struct s_authmgt *mgt, const struct s_peeraddr *peeraddr) {
 	int authstateid = idspNew(&mgt->idsp);
 	int tnow = utilGetClock();
 	
@@ -79,7 +60,7 @@ static int authmgtNew(struct s_authmgt *mgt, const struct s_peeraddr *peeraddr) 
 
 
 // Delete auth session.
-static void authmgtDelete(struct s_authmgt *mgt, const int authstateid) {
+void authmgtDelete(struct s_authmgt *mgt, const int authstateid) {
 	if(mgt->current_authed_id == authstateid) mgt->current_authed_id = -1;
 	if(mgt->current_completed_id == authstateid) mgt->current_completed_id = -1;
 	authReset(&mgt->authstate[authstateid]);
@@ -88,7 +69,7 @@ static void authmgtDelete(struct s_authmgt *mgt, const int authstateid) {
 
 
 // Start new auth session. Returns 1 on success.
-static int authmgtStart(struct s_authmgt *mgt, const struct s_peeraddr *peeraddr) {
+int authmgtStart(struct s_authmgt *mgt, const struct s_peeraddr *peeraddr) {
 	int authstateid = authmgtNew(mgt, peeraddr);
 	if(authstateid < 0) {
 		return 0;
@@ -100,13 +81,13 @@ static int authmgtStart(struct s_authmgt *mgt, const struct s_peeraddr *peeraddr
 
 
 // Check if auth manager has an authed peer.
-static int authmgtHasAuthedPeer(struct s_authmgt *mgt) {
+int authmgtHasAuthedPeer(struct s_authmgt *mgt) {
 	return (!(mgt->current_authed_id < 0));
 }
 
 
 // Get the NodeID of the current authed peer.
-static int authmgtGetAuthedPeerNodeID(struct s_authmgt *mgt, struct s_nodeid *nodeid) {
+int authmgtGetAuthedPeerNodeID(struct s_authmgt *mgt, struct s_nodeid *nodeid) {
 	if(authmgtHasAuthedPeer(mgt)) {
 		return authGetRemoteNodeID(&mgt->authstate[mgt->current_authed_id], nodeid);
 	}
@@ -117,7 +98,7 @@ static int authmgtGetAuthedPeerNodeID(struct s_authmgt *mgt, struct s_nodeid *no
 
 
 // Accept the current authed peer.
-static void authmgtAcceptAuthedPeer(struct s_authmgt *mgt, const int local_peerid, const int64_t seq, const int64_t flags) {
+void authmgtAcceptAuthedPeer(struct s_authmgt *mgt, const int local_peerid, const int64_t seq, const int64_t flags) {
 	if(authmgtHasAuthedPeer(mgt)) {
 		authSetLocalData(&mgt->authstate[mgt->current_authed_id], local_peerid, seq, flags);
 		mgt->current_authed_id = -1;
@@ -126,19 +107,19 @@ static void authmgtAcceptAuthedPeer(struct s_authmgt *mgt, const int local_peeri
 
 
 // Reject the current authed peer.
-static void authmgtRejectAuthedPeer(struct s_authmgt *mgt) {
+void authmgtRejectAuthedPeer(struct s_authmgt *mgt) {
 	if(authmgtHasAuthedPeer(mgt)) authmgtDelete(mgt, mgt->current_authed_id);
 }
 
 
 // Check if auth manager has a completed peer.
-static int authmgtHasCompletedPeer(struct s_authmgt *mgt) {
+int authmgtHasCompletedPeer(struct s_authmgt *mgt) {
 	return (!(mgt->current_completed_id < 0));
 }
 
 
 // Get the local PeerID of the current completed peer.
-static int authmgtGetCompletedPeerLocalID(struct s_authmgt *mgt) {
+int authmgtGetCompletedPeerLocalID(struct s_authmgt *mgt) {
 	if(authmgtHasCompletedPeer(mgt)) {
 		return mgt->authstate[mgt->current_completed_id].local_peerid;
 	}
@@ -149,7 +130,7 @@ static int authmgtGetCompletedPeerLocalID(struct s_authmgt *mgt) {
 
 
 // Get the NodeID of the current completed peer.
-static int authmgtGetCompletedPeerNodeID(struct s_authmgt *mgt, struct s_nodeid *nodeid) {
+int authmgtGetCompletedPeerNodeID(struct s_authmgt *mgt, struct s_nodeid *nodeid) {
 	if(authmgtHasCompletedPeer(mgt)) {
 		return authGetRemoteNodeID(&mgt->authstate[mgt->current_completed_id], nodeid);
 	}
@@ -160,7 +141,7 @@ static int authmgtGetCompletedPeerNodeID(struct s_authmgt *mgt, struct s_nodeid 
 
 
 // Get the remote PeerID and PeerAddr of the current completed peer.
-static int authmgtGetCompletedPeerAddress(struct s_authmgt *mgt, int *remote_peerid, struct s_peeraddr *remote_peeraddr) {
+int authmgtGetCompletedPeerAddress(struct s_authmgt *mgt, int *remote_peerid, struct s_peeraddr *remote_peeraddr) {
 	if(!authmgtHasCompletedPeer(mgt)) {
 		return 0;
 	}
@@ -173,7 +154,7 @@ static int authmgtGetCompletedPeerAddress(struct s_authmgt *mgt, int *remote_pee
 
 
 // Get the shared session keys of the current completed peer.
-static int authmgtGetCompletedPeerSessionKeys(struct s_authmgt *mgt, struct s_crypto *ctx) {
+int authmgtGetCompletedPeerSessionKeys(struct s_authmgt *mgt, struct s_crypto *ctx) {
 	if(authmgtHasCompletedPeer(mgt)) {
 		return authGetSessionKeys(&mgt->authstate[mgt->current_completed_id], ctx);
 	}
@@ -184,7 +165,7 @@ static int authmgtGetCompletedPeerSessionKeys(struct s_authmgt *mgt, struct s_cr
 
 
 // Get the connection parameters of the current completed peer.
-static int authmgtGetCompletedPeerConnectionParams(struct s_authmgt *mgt, int64_t *remoteseq, int64_t *remoteflags) {
+int authmgtGetCompletedPeerConnectionParams(struct s_authmgt *mgt, int64_t *remoteseq, int64_t *remoteflags) {
 	if(authmgtHasCompletedPeer(mgt)) {
 		return authGetConnectionParams(&mgt->authstate[mgt->current_completed_id], remoteseq, remoteflags);
 	}
@@ -194,13 +175,13 @@ static int authmgtGetCompletedPeerConnectionParams(struct s_authmgt *mgt, int64_
 }
 
 // Finish the current completed peer.
-static void authmgtFinishCompletedPeer(struct s_authmgt *mgt) {
+void authmgtFinishCompletedPeer(struct s_authmgt *mgt) {
 	mgt->current_completed_id = -1;
 }
 
 
 // Get next auth manager message.
-static int authmgtGetNextMsg(struct s_authmgt *mgt, struct s_msg *out_msg, struct s_peeraddr *target) {
+int authmgtGetNextMsg(struct s_authmgt *mgt, struct s_msg *out_msg, struct s_peeraddr *target) {
 	int used = idspUsedCount(&mgt->idsp);
 	int tnow = utilGetClock();
 	int authstateid;
@@ -233,7 +214,7 @@ static int authmgtGetNextMsg(struct s_authmgt *mgt, struct s_msg *out_msg, struc
 
 
 // Find auth session with specified PeerAddr.
-static int authmgtFindAddr(struct s_authmgt *mgt, const struct s_peeraddr *addr) {
+int authmgtFindAddr(struct s_authmgt *mgt, const struct s_peeraddr *addr) {
 	int count = idspUsedCount(&mgt->idsp);
 	int i;
 	int j;
@@ -246,7 +227,7 @@ static int authmgtFindAddr(struct s_authmgt *mgt, const struct s_peeraddr *addr)
 
 
 // Find unused auth session.
-static int authmgtFindUnused(struct s_authmgt *mgt) {
+int authmgtFindUnused(struct s_authmgt *mgt) {
 	int count = idspUsedCount(&mgt->idsp);
 	int i;
 	int j;
@@ -261,7 +242,7 @@ static int authmgtFindUnused(struct s_authmgt *mgt) {
 
 
 // Decode auth message. Returns 1 if message is accepted.
-static int authmgtDecodeMsg(struct s_authmgt *mgt, const unsigned char *msg, const int msg_len, const struct s_peeraddr *peeraddr) {
+int authmgtDecodeMsg(struct s_authmgt *mgt, const unsigned char *msg, const int msg_len, const struct s_peeraddr *peeraddr) {
 	int authid;
 	int authstateid;
 	int tnow = utilGetClock();
@@ -352,13 +333,13 @@ static int authmgtDecodeMsg(struct s_authmgt *mgt, const unsigned char *msg, con
 
 
 // Enable/disable fastauth (ignore send timeout after auth status change)
-static void authmgtSetFastauth(struct s_authmgt *mgt, const int enable) {
+void authmgtSetFastauth(struct s_authmgt *mgt, const int enable) {
     mgt->fastauth = (enable);
 }
 
 
 // Reset auth manager object.
-static void authmgtReset(struct s_authmgt *mgt) {
+void authmgtReset(struct s_authmgt *mgt) {
 	int i;
 	int count = idspSize(&mgt->idsp);
 	for(i=0; i<count; i++) {
@@ -375,7 +356,7 @@ static void authmgtReset(struct s_authmgt *mgt) {
 
 
 // Create auth manager object.
-static int authmgtCreate(struct s_authmgt *mgt, struct s_netid *netid, const int auth_slots, struct s_nodekey *local_nodekey, struct s_dh_state *dhstate) {
+int authmgtCreate(struct s_authmgt *mgt, struct s_netid *netid, const int auth_slots, struct s_nodekey *local_nodekey, struct s_dh_state *dhstate) {
     debug("Initializing AuthMgt");
     
 	int ac;
@@ -443,7 +424,7 @@ static int authmgtCreate(struct s_authmgt *mgt, struct s_netid *netid, const int
 
 
 // Destroy auth manager object.
-static void authmgtDestroy(struct s_authmgt *mgt) {
+void authmgtDestroy(struct s_authmgt *mgt) {
 	int i;
 	int count = idspSize(&mgt->idsp);
 	idspDestroy(&mgt->idsp);

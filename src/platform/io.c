@@ -27,6 +27,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include "logging.h"
 
 
 #if defined(IO_LINUX) || defined(IO_BSD)
@@ -50,7 +51,7 @@
 
 
 // Returns length of string.
-static int ioStrlen(const char *str, const int max_len) {
+int ioStrlen(const char *str, const int max_len) {
 	int len;
 	len = 0;
 	if(str != NULL) {
@@ -63,7 +64,7 @@ static int ioStrlen(const char *str, const int max_len) {
 
 
 // Resolve name. Returns number of addresses.
-static int ioResolveName(struct s_io_addrinfo *iai, const char *hostname, const char *port) {
+int ioResolveName(struct s_io_addrinfo *iai, const char *hostname, const char *port) {
 	int ret;
 	struct s_io_addr *iaiaddr;
 	struct sockaddr_in6 *saddr6;
@@ -127,7 +128,7 @@ static int ioResolveName(struct s_io_addrinfo *iai, const char *hostname, const 
 
 
 // Reset handle ID values and buffers.
-static void ioResetID(struct s_io_state *iostate, const int id) {
+void ioResetID(struct s_io_state *iostate, const int id) {
 	iostate->handle[id].enabled = 0;
 	iostate->handle[id].content_len = 0;
 	iostate->handle[id].fd = -1;
@@ -151,7 +152,7 @@ static void ioResetID(struct s_io_state *iostate, const int id) {
 
 
 // Allocates a handle ID. Returns ID if succesful, or -1 on error.
-static int ioAllocID(struct s_io_state *iostate) {
+int ioAllocID(struct s_io_state *iostate) {
 	int i;
 	if(iostate->count < iostate->max) {
 		for(i=0; i<iostate->max; i++) {
@@ -171,7 +172,7 @@ static int ioAllocID(struct s_io_state *iostate) {
 
 
 // Deallocates a handle ID.
-static void ioDeallocID(struct s_io_state *iostate, const int id) {
+void ioDeallocID(struct s_io_state *iostate, const int id) {
 	if((iostate->count > 0) && (id >= 0) && (id < iostate->max)) {
 		if(iostate->handle[id].enabled) {
 #if defined(IO_WINDOWS)
@@ -186,7 +187,7 @@ static void ioDeallocID(struct s_io_state *iostate, const int id) {
 
 
 // Closes a handle ID.
-static void ioClose(struct s_io_state *iostate, const int id) {
+void ioClose(struct s_io_state *iostate, const int id) {
 	if(id >= 0 && id < iostate->max) {
 		if(iostate->handle[id].enabled) {
 			if(iostate->handle[id].open) {
@@ -206,7 +207,7 @@ static void ioClose(struct s_io_state *iostate, const int id) {
 
 
 // Opens a socket. Returns handle ID if successful, or -1 on error.
-static int ioOpenSocket(struct s_io_state *iostate, const int iotype, const char *bindaddress, const char *bindport, const int domain, const int type, const int protocol) {
+int ioOpenSocket(struct s_io_state *iostate, const int iotype, const char *bindaddress, const char *bindport, const int domain, const int type, const int protocol) {
 	int id;
 	int sockfd;
 
@@ -321,13 +322,13 @@ static int ioOpenSocket(struct s_io_state *iostate, const int iotype, const char
 
 
 // Opens an IPv6 UDP socket. Returns handle ID if successful, or -1 on error.
-static int ioOpenSocketV6(struct s_io_state *iostate, const char *bindaddress, const char *bindport) {
+int ioOpenSocketV6(struct s_io_state *iostate, const char *bindaddress, const char *bindport) {
 	return ioOpenSocket(iostate, IO_TYPE_SOCKET_V6, bindaddress, bindport, AF_INET6, SOCK_DGRAM, 0);
 }
 
 
 // Opens an IPv4 UDP socket. Returns handle ID if successful, or -1 on error.
-static int ioOpenSocketV4(struct s_io_state *iostate, const char *bindaddress, const char *bindport) {
+int ioOpenSocketV4(struct s_io_state *iostate, const char *bindaddress, const char *bindport) {
 	return ioOpenSocket(iostate, IO_TYPE_SOCKET_V4, bindaddress, bindport, AF_INET, SOCK_DGRAM, 0);
 }
 
@@ -342,7 +343,7 @@ static int ioOpenSocketV4(struct s_io_state *iostate, const char *bindaddress, c
 #define IO_TAPWIN_TAPSUFFIX ".tap"
 #define IO_TAPWIN_SEARCH_IF_GUID_FROM_NAME 0
 #define IO_TAPWIN_SEARCH_IF_NAME_FROM_GUID 1
-static char *ioOpenTAPWINSearch(char *value, char *key, int type) {
+char *ioOpenTAPWINSearch(char *value, char *key, int type) {
 	int i = 0;
 	LONG status;
 	DWORD len;
@@ -408,7 +409,7 @@ static char *ioOpenTAPWINSearch(char *value, char *key, int type) {
 	}
 	return NULL;
 }
-static HANDLE ioOpenTAPWINDev(char *guid, char *dev) {
+HANDLE ioOpenTAPWINDev(char *guid, char *dev) {
 	HANDLE handle;
 	ULONG len, status;
 	char device_path[512];
@@ -426,7 +427,7 @@ static HANDLE ioOpenTAPWINDev(char *guid, char *dev) {
 	}
 	return handle;
 }
-static HANDLE ioOpenTAPWINHandle(char *tapname, const char *reqname, const int reqname_len) {
+HANDLE ioOpenTAPWINHandle(char *tapname, const char *reqname, const int reqname_len) {
 	HANDLE handle = INVALID_HANDLE_VALUE;
 	HKEY unit_key;
 	char guid[256];
@@ -518,7 +519,7 @@ static HANDLE ioOpenTAPWINHandle(char *tapname, const char *reqname, const int r
 
 
 // Opens a TAP device. Returns handle ID if succesful, or -1 on error.
-static int ioOpenTAP(struct s_io_state *iostate, char *tapname, const char *reqname) {
+int ioOpenTAP(struct s_io_state *iostate, char *tapname, const char *reqname) {
 	int id;
 	int tapfd;
 	char filename[512];
@@ -669,7 +670,7 @@ static int ioOpenTAP(struct s_io_state *iostate, char *tapname, const char *reqn
 
 
 // Opens STDIN. Returns handle ID if succesful, or -1 on error.
-static int ioOpenSTDIN(struct s_io_state *iostate) {
+ int ioOpenSTDIN(struct s_io_state *iostate) {
 	int id;
 
 #if defined(IO_LINUX) || defined(IO_BSD)
@@ -701,7 +702,7 @@ static int ioOpenSTDIN(struct s_io_state *iostate) {
 
 
 // Receives an UDP packet. Returns length of received message, or 0 if nothing is received.
-static int ioHelperRecvFrom(struct s_io_handle *handle, unsigned char *recv_buf, const int recv_buf_size, struct sockaddr *source_sockaddr, socklen_t *source_sockaddr_len) {
+ int ioHelperRecvFrom(struct s_io_handle *handle, unsigned char *recv_buf, const int recv_buf_size, struct sockaddr *source_sockaddr, socklen_t *source_sockaddr_len) {
 	int len;
 
 #if defined(IO_LINUX) || defined(IO_BSD)
@@ -746,7 +747,7 @@ static int ioHelperRecvFrom(struct s_io_handle *handle, unsigned char *recv_buf,
 
 #if defined(IO_WINDOWS)
 // Finish receiving an UDP packet. Returns amount of bytes read, or 0 if nothing is read.
-static int ioHelperFinishRecvFrom(struct s_io_handle *handle) {
+ int ioHelperFinishRecvFrom(struct s_io_handle *handle) {
 	DWORD len;
 	DWORD flags;
 
@@ -779,7 +780,7 @@ static int ioHelperFinishRecvFrom(struct s_io_handle *handle) {
 
 
 // Sends an UDP packet. Returns length of sent message.
-static int ioHelperSendTo(struct s_io_handle *handle, const unsigned char *send_buf, const int send_buf_size, const struct sockaddr *destination_sockaddr, const socklen_t destination_sockaddr_len) {
+ int ioHelperSendTo(struct s_io_handle *handle, const unsigned char *send_buf, const int send_buf_size, const struct sockaddr *destination_sockaddr, const socklen_t destination_sockaddr_len) {
 	int len;
 
 #if defined(IO_LINUX) || defined(IO_BSD)
@@ -830,7 +831,7 @@ static int ioHelperSendTo(struct s_io_handle *handle, const unsigned char *send_
 
 
 // Reads from file. Returns amount of bytes read, or 0 if nothing is read.
-static int ioHelperReadFile(struct s_io_handle *handle, unsigned char *read_buf, const int read_buf_size) {
+int ioHelperReadFile(struct s_io_handle *handle, unsigned char *read_buf, const int read_buf_size) {
 	int len;
 
 #if defined(IO_LINUX) || defined(IO_BSD)
@@ -869,7 +870,7 @@ static int ioHelperReadFile(struct s_io_handle *handle, unsigned char *read_buf,
 
 #if defined(IO_WINDOWS)
 // Finish reading from file. Returns amount of bytes read, or 0 if nothing is read.
-static int ioHelperFinishReadFile(struct s_io_handle *handle) {
+int ioHelperFinishReadFile(struct s_io_handle *handle) {
 	DWORD len;
 
 	len = 0;
@@ -900,7 +901,7 @@ static int ioHelperFinishReadFile(struct s_io_handle *handle) {
 
 
 // Writes to file. Returns amount of bytes written.
-static int ioHelperWriteFile(struct s_io_handle *handle, const unsigned char *write_buf, const int write_buf_size) {
+int ioHelperWriteFile(struct s_io_handle *handle, const unsigned char *write_buf, const int write_buf_size) {
 	int len;
 
 #if defined(IO_LINUX) || defined(IO_BSD)
@@ -946,7 +947,7 @@ static int ioHelperWriteFile(struct s_io_handle *handle, const unsigned char *wr
 
 
 // Prepares read operation on specified handle ID.
-static void ioPreRead(struct s_io_state *iostate, const int id) {
+void ioPreRead(struct s_io_state *iostate, const int id) {
 	int ret;
 	socklen_t sockaddr_len;
 	switch(iostate->handle[id].type) {
@@ -970,7 +971,7 @@ static void ioPreRead(struct s_io_state *iostate, const int id) {
 
 
 // Reads data on specified handle ID. Returns amount of bytes read, or 0 if nothing is read.
-static int ioRead(struct s_io_state *iostate, const int id) {
+int ioRead(struct s_io_state *iostate, const int id) {
 	int ret;
 
 #if defined(IO_LINUX) || defined(IO_BSD)
@@ -1006,7 +1007,7 @@ static int ioRead(struct s_io_state *iostate, const int id) {
 
 
 // Waits for data on any handle and read it. Returns the amount of handles where data have been read.
-static int ioReadAll(struct s_io_state *iostate) {
+int ioReadAll(struct s_io_state *iostate) {
 	int ret;
 	int i;
 
@@ -1088,7 +1089,7 @@ static int ioReadAll(struct s_io_state *iostate) {
 
 
 // Writes data on specified handle ID. Returns amount of bytes written.
-static int ioWrite(struct s_io_state *iostate, const int id, const unsigned char *write_buf, const int write_buf_size, const struct s_io_addr *destination_addr) {
+int ioWrite(struct s_io_state *iostate, const int id, const unsigned char *write_buf, const int write_buf_size, const struct s_io_addr *destination_addr) {
 	int ret;
 	struct sockaddr_storage destination_sockaddr;
 	struct sockaddr_in6 *destination_sockaddr_v6;
@@ -1153,7 +1154,7 @@ static int ioWrite(struct s_io_state *iostate, const int id, const unsigned char
 
 
 // Writes data on one handle ID of the specified group. Returns amount of bytes written.
-static int ioWriteGroup(struct s_io_state *iostate, const int group, const unsigned char *write_buf, const int write_buf_size, const struct s_io_addr *destination_addr) {
+int ioWriteGroup(struct s_io_state *iostate, const int group, const unsigned char *write_buf, const int write_buf_size, const struct s_io_addr *destination_addr) {
 	int i;
 	int ret;
 	for(i=0; i<iostate->max; i++) {
@@ -1169,7 +1170,7 @@ static int ioWriteGroup(struct s_io_state *iostate, const int group, const unsig
 
 
 // Returns the first handle of the specified group that has data, or -1 if there is none.
-static int ioGetGroup(struct s_io_state *iostate, const int group) {
+int ioGetGroup(struct s_io_state *iostate, const int group) {
 	int i;
 	for(i=0; i<iostate->max; i++) {
 		if((iostate->handle[i].group_id == group) && (iostate->handle[i].content_len > 0)) {
@@ -1181,19 +1182,19 @@ static int ioGetGroup(struct s_io_state *iostate, const int group) {
 
 
 // Returns a pointer to the data buffer of the specified handle ID.
-static unsigned char * ioGetData(struct s_io_state *iostate, const int id) {
+unsigned char * ioGetData(struct s_io_state *iostate, const int id) {
 	return &iostate->mem[id * iostate->bufsize];
 }
 
 
 // Returns the data buffer content length of the specified handle ID, or zero if there are no data.
-static int ioGetDataLen(struct s_io_state *iostate, const int id) {
+int ioGetDataLen(struct s_io_state *iostate, const int id) {
 	return iostate->handle[id].content_len;
 }
 
 
 // Returns a pointer to the current source address of the specified handle ID.
-static struct s_io_addr * ioGetAddr(struct s_io_state *iostate, const int id) {
+struct s_io_addr * ioGetAddr(struct s_io_state *iostate, const int id) {
 	struct s_io_addr *ioaddr;
 	struct sockaddr_storage *source_sockaddr;
 	struct sockaddr_in6 *source_sockaddr_v6;
@@ -1234,13 +1235,13 @@ static struct s_io_addr * ioGetAddr(struct s_io_state *iostate, const int id) {
 
 
 // Clear data of the specified handle ID.
-static void ioGetClear(struct s_io_state *iostate, const int id) {
+void ioGetClear(struct s_io_state *iostate, const int id) {
 	iostate->handle[id].content_len = 0;
 }
 
 
 // Set group ID of handle ID
-static void ioSetGroup(struct s_io_state *iostate, const int id, const int group) {
+void ioSetGroup(struct s_io_state *iostate, const int id, const int group) {
 	if(id >= 0 && id < iostate->max) {
 		iostate->handle[id].group_id = group;
 	}
@@ -1248,7 +1249,7 @@ static void ioSetGroup(struct s_io_state *iostate, const int id, const int group
 
 
 // Set sockmark value for new sockets.
-static void ioSetSockmark(struct s_io_state *iostate, const int io_sockmark) {
+void ioSetSockmark(struct s_io_state *iostate, const int io_sockmark) {
 	if(io_sockmark > 0) {
 		iostate->sockmark = io_sockmark;
 	}
@@ -1259,7 +1260,7 @@ static void ioSetSockmark(struct s_io_state *iostate, const int io_sockmark) {
 
 
 // Enable/Disable NAT64 CLAT support.
-static void ioSetNat64Clat(struct s_io_state *iostate, const int enable) {
+void ioSetNat64Clat(struct s_io_state *iostate, const int enable) {
 	if(enable > 0) {
 		iostate->nat64clat = 1;
 	}
@@ -1270,7 +1271,7 @@ static void ioSetNat64Clat(struct s_io_state *iostate, const int enable) {
 
 
 // Set IO read timeout (in seconds).
-static void ioSetTimeout(struct s_io_state *iostate, const int io_timeout) {
+void ioSetTimeout(struct s_io_state *iostate, const int io_timeout) {
 	if(io_timeout > 0) {
 		iostate->timeout = io_timeout;
 	}
@@ -1281,7 +1282,7 @@ static void ioSetTimeout(struct s_io_state *iostate, const int io_timeout) {
 
 
 // Closes all handles and resets defaults.
-static void ioReset(struct s_io_state *iostate) {
+void ioReset(struct s_io_state *iostate) {
 	int i;
 	for(i=0; i<iostate->max; i++) {
 		ioClose(iostate, i);
@@ -1296,7 +1297,7 @@ static void ioReset(struct s_io_state *iostate) {
 
 
 // Create IO state structure. Returns 1 on success.
-static int ioCreate(struct s_io_state *iostate, const int io_bufsize, const int io_max) {
+int ioCreate(struct s_io_state *iostate, const int io_bufsize, const int io_max) {
 #ifdef IO_WINDOWS
 	WSADATA wsadata;
 	if(WSAStartup(MAKEWORD(2,2), &wsadata) != 0) { return 0; }
@@ -1321,7 +1322,7 @@ static int ioCreate(struct s_io_state *iostate, const int io_bufsize, const int 
 
 
 // Destroy IO state structure.
-static void ioDestroy(struct s_io_state *iostate) {
+void ioDestroy(struct s_io_state *iostate) {
 	ioReset(iostate);
 	free(iostate->handle);
 	free(iostate->mem);

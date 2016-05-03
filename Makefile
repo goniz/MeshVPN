@@ -7,11 +7,32 @@ COMMIT=$(shell git log --format='%H' | head -n 1)
 objects = src/encryption/rsa.o \
           src/encryption/crypto.o \
           src/encryption/dh.o \
+          src/p2p/idsp.o \
           src/p2p/auth.o \
           src/p2p/nodeid.o \
+          src/p2p/nodedb.o \
+          src/p2p/peeraddr.o \
+          src/p2p/peermgt.o \
+          src/p2p/authmgt.o \
+          src/p2p/packet.o \
+          src/p2p/dfrag.o \
+          src/p2p/p2psec.o \
+          src/p2p/netid.o \
+          src/p2p/seq.o \
+          src/platform/io.o \
           src/platform/seccomp.o \
+          src/platform/perms.o \
+          src/app/init.o \
+          src/app/loop.o \
+          src/app/config.o \
+          src/app/util.o \
+          src/app/map.o \
+          src/app/logging.o \
+          src/ethernet/checksum.o \
+          src/ethernet/ndp6.o \
+          src/ethernet/switch.o \
+          src/ethernet/virtserv.o \
           peervpn.o \
-          logging.o
 
 all: peervpn
 peervpn: $(objects)

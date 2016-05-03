@@ -19,6 +19,8 @@
 #define H_GLOBALS
 
 #include "io.h"
+#include "p2p.h"
+#include "ethernet.h"
 
 // version information
 #define PEERVPN_VERSION_MAJOR 0
@@ -47,7 +49,7 @@ struct s_initpeers {
 };
 // global variables
 struct s_io_state iostate;
-P2PSEC_CTX *g_p2psec = NULL;
+struct s_p2psec *g_p2psec = NULL;
 int g_mainloop;
 
 struct s_switch_state g_switchstate;

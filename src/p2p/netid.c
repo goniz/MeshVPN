@@ -17,14 +17,16 @@
  ***************************************************************************/
 
 
-#ifndef H_P2PSEC
-#define H_P2PSEC
+#ifndef F_NETID_C
+#define F_NETID_C
+
+#include "p2p.h"
+#include "crypto.h"
+
+int netidSet(struct s_netid *netid, const char *netname, const int netname_len) {
+	memset(netid->id, 0, netid_SIZE);
+	return cryptoCalculateSHA256(netid->id, netid_SIZE, (unsigned char *)netname, netname_len);
+}
 
 
-#define P2PSEC_CTX struct s_p2psec
-
-
-P2PSEC_CTX;
-
-
-#endif // F_P2PSEC_H
+#endif // F_NETID_C

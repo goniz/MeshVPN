@@ -21,40 +21,20 @@
 #define F_NODEDB_C
 
 
-#include "map.c"
-#include "peeraddr.c"
-#include "../include/nodeid.h"
-#include "peeraddr.c"
-#include "util.c"
-
-
-// The NodeDB addrdata structure.
-struct s_nodedb_addrdata {
-	int lastseen;
-	int lastseen_t;
-	int lastconnect;
-	int lastconnect_t;
-	int lastconntry;
-	int lastconntry_t;
-};
-
-
-// The NodeDB structure.
-struct s_nodedb {
-	struct s_map *addrdb;
-	int num_peeraddrs;
-};
-
+#include "map.h"
+#include "nodeid.h"
+#include "util.h"
+#include "p2p.h"
 
 // Initialize NodeDB.
-static void nodedbInit(struct s_nodedb *db) {
+void nodedbInit(struct s_nodedb *db) {
 	mapInit(db->addrdb);
 	mapEnableReplaceOld(db->addrdb);
 }
 
 
 // Update NodeDB entry.
-static void nodedbUpdate(struct s_nodedb *db, struct s_nodeid *nodeid, struct s_peeraddr *addr, const int update_lastseen, const int update_lastconnect, const int update_lastconntry) {
+void nodedbUpdate(struct s_nodedb *db, struct s_nodeid *nodeid, struct s_peeraddr *addr, const int update_lastseen, const int update_lastconnect, const int update_lastconntry) {
 	int tnow = utilGetClock();
 	struct s_map *addrset;
 	struct s_map *newaddrset;
@@ -102,7 +82,7 @@ static void nodedbUpdate(struct s_nodedb *db, struct s_nodeid *nodeid, struct s_
 
 
 // Returns a NodeDB ID that matches the specified criteria, with explicit nid/tnow.
-static int nodedbGetDBIDByID(struct s_nodedb *db, const int nid, const int tnow, const int max_lastseen, const int max_lastconnect, const int min_lastconntry) {
+int nodedbGetDBIDByID(struct s_nodedb *db, const int nid, const int tnow, const int max_lastseen, const int max_lastconnect, const int min_lastconntry) {
 	int j, j_max, aid, ret;
 	struct s_nodedb_addrdata *dbdata;
 	struct s_map *addrset;
@@ -137,7 +117,7 @@ static int nodedbGetDBIDByID(struct s_nodedb *db, const int nid, const int tnow,
 
 
 // Returns a NodeDB ID that matches the specified criteria.
-static int nodedbGetDBID(struct s_nodedb *db, struct s_nodeid *nodeid, const int max_lastseen, const int max_lastconnect, const int min_lastconntry) {
+int nodedbGetDBID(struct s_nodedb *db, struct s_nodeid *nodeid, const int max_lastseen, const int max_lastconnect, const int min_lastconntry) {
 	int i, i_max, nid, tnow, ret;
 	tnow = utilGetClock();
 	i_max = mapGetKeyCount(db->addrdb);
@@ -161,7 +141,7 @@ static int nodedbGetDBID(struct s_nodedb *db, struct s_nodeid *nodeid, const int
 
 
 // Returns node ID of specified NodeDB ID.
-static struct s_nodeid *nodedbGetNodeID(struct s_nodedb *db, const int db_id) {
+struct s_nodeid *nodedbGetNodeID(struct s_nodedb *db, const int db_id) {
 	int nid;
 	nid = (db_id / db->num_peeraddrs);
 	return mapGetKeyByID(db->addrdb, nid);
@@ -169,7 +149,7 @@ static struct s_nodeid *nodedbGetNodeID(struct s_nodedb *db, const int db_id) {
 
 
 // Returns node address of specified NodeDB ID.
-static struct s_peeraddr *nodedbGetNodeAddress(struct s_nodedb *db, const int db_id) {
+struct s_peeraddr *nodedbGetNodeAddress(struct s_nodedb *db, const int db_id) {
 	struct s_map *addrset;
 	int nid, aid;
 
@@ -185,7 +165,7 @@ static struct s_peeraddr *nodedbGetNodeAddress(struct s_nodedb *db, const int db
 
 
 // Create NodeDB.
-static int nodedbCreate(struct s_nodedb *db, const int size, const int num_peeraddrs) {
+int nodedbCreate(struct s_nodedb *db, const int size, const int num_peeraddrs) {
 	const int addrdb_vsize = mapMemSize(num_peeraddrs, peeraddr_SIZE, sizeof(struct s_nodedb_addrdata));
 	const int addrdb_memsize = mapMemSize(size, nodeid_SIZE, addrdb_vsize);
 	struct s_map *addrdb_mem;
@@ -205,13 +185,13 @@ static int nodedbCreate(struct s_nodedb *db, const int size, const int num_peera
 
 
 // Destroy NodeDB.
-static void nodedbDestroy(struct s_nodedb *db) {
+void nodedbDestroy(struct s_nodedb *db) {
 	free(db->addrdb);
 }
 
 
 // Generate NodeDB status report.
-static void nodedbStatus(struct s_nodedb *db, char *report, const int report_len) {
+void nodedbStatus(struct s_nodedb *db, char *report, const int report_len) {
 	int i;
 	int j;
 	int size;

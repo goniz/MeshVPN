@@ -21,59 +21,45 @@
 #define F_MAP_C
 
 
-#include "idsp.c"
+#include "idsp.h"
 #include <stdlib.h>
 #include <string.h>
-
-
-// The map struct.
-struct s_map {
-	struct s_idsp idsp;    
-	unsigned char *key;
-	unsigned char *value;
-	int *left;
-	int *right;
-	int maxnode;
-	int rootid;
-	int key_size;
-	int value_size;
-	int replace_old;
-};
-
+#include "p2p.h"
+#include "map.h"
 
 
 // Enables replacing of old entries if map is full.
-static void mapEnableReplaceOld(struct s_map *map) {
+void mapEnableReplaceOld(struct s_map *map) {
 	map->replace_old = 1;
 }
 
 
 // Disables replacing of old entries if map is full.
-static void mapDisableReplaceOld(struct s_map *map) {
+void mapDisableReplaceOld(struct s_map *map) {
 	map->replace_old = 0;
 }
 
 
 // Return the size of a stored key.
-static int mapGetKeySize(struct s_map *map) {
+int mapGetKeySize(struct s_map *map) {
 	return map->key_size;
 }
 
 
 // Return the size of a stored value.
-static int mapGetValueSize(struct s_map *map) {
+int mapGetValueSize(struct s_map *map) {
 	return map->value_size;
 }
 
 
 // Return 1 if ID is valid.
-static int mapIsValidID(struct s_map *map, const int id) {
+int mapIsValidID(struct s_map *map, const int id) {
 	return idspIsValid(&map->idsp, id);
 }
 
 
 // Return a pointer to key[id].
-static void *mapGetKeyByID(struct s_map *map, const int id) {
+void *mapGetKeyByID(struct s_map *map, const int id) {
 	if((!(id < 0)) && (map != NULL)) {
 		return &map->key[id * mapGetKeySize(map)];
 	}
@@ -84,20 +70,20 @@ static void *mapGetKeyByID(struct s_map *map, const int id) {
 
 
 // Compare stored prefix to an external prefix.
-static int mapComparePrefixExt(struct s_map *map, const int id, const void *prefix, const int prefixlen) {
+int mapComparePrefixExt(struct s_map *map, const int id, const void *prefix, const int prefixlen) {
 	void *skey = mapGetKeyByID(map, id);
 	return memcmp(skey, prefix, prefixlen);
 }
 
 
 // Compare stored key to an external key.
-static int mapCompareKeysExt(struct s_map *map, const int id, const void *key) {
+int mapCompareKeysExt(struct s_map *map, const int id, const void *key) {
 	return mapComparePrefixExt(map, id, key, mapGetKeySize(map));
 }
 
 
 // Move the node with the specified key prefix to the root. Return 1 if the key has been found, or 0 if not.
-static int mapSplayPrefix(struct s_map *map, const void *prefix, const int prefixlen) {
+int mapSplayPrefix(struct s_map *map, const void *prefix, const int prefixlen) {
 	int ret = 0;
 	int cur_nodeid = map->rootid;
 	int maxnode = map->maxnode;
@@ -156,13 +142,13 @@ static int mapSplayPrefix(struct s_map *map, const void *prefix, const int prefi
 
 
 // Move the node with the specified key to the root. Return 1 if the key has been found, or 0 if not.
-static int mapSplayKey(struct s_map *map, const void *key) {
+int mapSplayKey(struct s_map *map, const void *key) {
 	return mapSplayPrefix(map, key, mapGetKeySize(map));
 }
 
 
 // Initialize the map. This removes all key/value pairs.
-static void mapInit(struct s_map *map) {
+void mapInit(struct s_map *map) {
 	idspReset(&map->idsp);
 	map->maxnode = 0;
 	map->rootid = -1;
@@ -170,31 +156,31 @@ static void mapInit(struct s_map *map) {
 
 
 // Return the map size.
-static int mapGetMapSize(struct s_map *map) {
+int mapGetMapSize(struct s_map *map) {
 	return idspSize(&map->idsp);
 }
 
 
 // Return the current amount of stored keys.
-static int mapGetKeyCount(struct s_map *map) {
+int mapGetKeyCount(struct s_map *map) {
 	return idspUsedCount(&map->idsp);
 }
 
 
 // Return the next ID of a valid key.
-static int mapGetNextKeyID(struct s_map *map) {
+int mapGetNextKeyID(struct s_map *map) {
 	return idspNext(&map->idsp);
 }
 
 
 // Return the next ID of a valid key, starting from specified ID.
-static int mapGetNextKeyIDN(struct s_map *map, const int start) {
+int mapGetNextKeyIDN(struct s_map *map, const int start) {
 	return idspNextN(&map->idsp, start);
 }
 
 
 // Get the ID of a key that starts with the specified prefix. Returns the ID or -1 if no key is found.
-static int mapGetPrefixID(struct s_map *map, const void *prefix, const int prefixlen) {
+int mapGetPrefixID(struct s_map *map, const void *prefix, const int prefixlen) {
 	if(mapSplayPrefix(map, prefix, prefixlen)) {
 		return map->rootid;
 	}
@@ -205,13 +191,13 @@ static int mapGetPrefixID(struct s_map *map, const void *prefix, const int prefi
 
 
 // Get the ID of specified key. Returns the ID or -1 if the key is not found.
-static int mapGetKeyID(struct s_map *map, const void *key) {
+int mapGetKeyID(struct s_map *map, const void *key) {
 	return mapGetPrefixID(map, key, mapGetKeySize(map));
 }
 
 
 // Get the ID of an "old" key (located near the bottom of the tree).
-static int mapGetOldKeyID(struct s_map *map) {
+int mapGetOldKeyID(struct s_map *map) {
 	int l;
 	int r;
 	int cur_nodeid = map->rootid;
@@ -253,7 +239,7 @@ static int mapGetOldKeyID(struct s_map *map) {
 
 
 // Return a pointer to value[id].
-static void *mapGetValueByID(struct s_map *map, const int id) {
+void *mapGetValueByID(struct s_map *map, const int id) {
 	if((!(id < 0)) && (map != NULL)) {
 		return &map->value[id * mapGetValueSize(map)];
 	}
@@ -264,7 +250,7 @@ static void *mapGetValueByID(struct s_map *map, const int id) {
 
 
 // Set new value[id].
-static void mapSetValueByID(struct s_map *map, const int id, const void *value) {
+void mapSetValueByID(struct s_map *map, const int id, const void *value) {
 	unsigned char *tptr = mapGetValueByID(map, id);
 	if((!(id < 0)) && (map != NULL)) {
 		if(value == NULL) {
@@ -278,7 +264,7 @@ static void mapSetValueByID(struct s_map *map, const int id, const void *value) 
 
 
 // Remove the specified key/value pair. Returns removed key ID on success or -1 if the operation fails.
-static int mapRemoveReturnID(struct s_map *map, const void *key) {
+int mapRemoveReturnID(struct s_map *map, const void *key) {
 	int x = mapSplayKey(map, key);
 	int rootid = map->rootid;
 	
@@ -306,7 +292,7 @@ static int mapRemoveReturnID(struct s_map *map, const void *key) {
 
 
 // Remove the specified key/value pair. Returns 1 on success or 0 if the operation fails.
-static int mapRemove(struct s_map *map, const void *key) {
+int mapRemove(struct s_map *map, const void *key) {
 	if(mapRemoveReturnID(map, key) < 0) {
 		return 0;
 	}
@@ -317,7 +303,7 @@ static int mapRemove(struct s_map *map, const void *key) {
 
 
 // Add the specified key/value pair. Returns added key ID on success or -1 if the operation fails.
-static int mapAddReturnID(struct s_map *map, const void *key, const void *value) {
+int mapAddReturnID(struct s_map *map, const void *key, const void *value) {
 	int x;
 	int rootid;
 	int nodeid;
@@ -383,7 +369,7 @@ static int mapAddReturnID(struct s_map *map, const void *key, const void *value)
 
 
 // Add the specified key/value pair. Returns 1 on success or 0 if the operation fails.
-static int mapAdd(struct s_map *map, const void *key, const void *value) {
+int mapAdd(struct s_map *map, const void *key, const void *value) {
 	if(mapAddReturnID(map, key, value) < 0) {
 		return 0;
 	}
@@ -394,7 +380,7 @@ static int mapAdd(struct s_map *map, const void *key, const void *value) {
 
 
 // Sets the specified key/value pair. The key will be added if it doesn't exist yet. Returns key ID on success or -1 if the operation fails.
-static int mapSetReturnID(struct s_map *map, const void *key, const void *value) {
+int mapSetReturnID(struct s_map *map, const void *key, const void *value) {
 	int ret = mapAddReturnID(map, key, value);
 	if(ret < 0) {
 		ret = mapGetKeyID(map, key);
@@ -413,7 +399,7 @@ static int mapSetReturnID(struct s_map *map, const void *key, const void *value)
 
 
 // Sets the specified key/value pair. The key will be created if it doesn't exist yet. Returns 1 on success or 0 if the operation fails.
-static int mapSet(struct s_map *map, const void *key, const void *value) {
+int mapSet(struct s_map *map, const void *key, const void *value) {
 	if(mapSetReturnID(map, key, value) < 0) {
 		return 0;
 	}
@@ -424,7 +410,7 @@ static int mapSet(struct s_map *map, const void *key, const void *value) {
 
 
 // Return a pointer to the value of a key that matches the specified prefix.
-static void *mapGetN(struct s_map *map, const void *prefix, const int prefixlen) {
+void *mapGetN(struct s_map *map, const void *prefix, const int prefixlen) {
 	int id;
 	id = mapGetPrefixID(map, prefix, prefixlen);
 	if(id < 0) return NULL;
@@ -433,13 +419,13 @@ static void *mapGetN(struct s_map *map, const void *prefix, const int prefixlen)
 
 
 // Return a pointer to the value of the specified key.
-static void *mapGet(struct s_map *map, const void *key) {
+void *mapGet(struct s_map *map, const void *key) {
 	return mapGetN(map, key, mapGetKeySize(map));
 }
 
 
 // Calculate required memory size for map.
-static int mapMemSize(const int map_size, const int key_size, const int value_size) {
+int mapMemSize(const int map_size, const int key_size, const int value_size) {
 	const int align_boundary = idsp_ALIGN_BOUNDARY;
 	int memsize;
 	memsize = 0;
@@ -454,7 +440,7 @@ static int mapMemSize(const int map_size, const int key_size, const int value_si
 
 
 // Set up map data structure on preallocated memory.
-static int mapMemInit(struct s_map *map, const int mem_size, const int map_size, const int key_size, const int value_size) {
+int mapMemInit(struct s_map *map, const int mem_size, const int map_size, const int key_size, const int value_size) {
 	const int align_boundary = idsp_ALIGN_BOUNDARY;
 	const int keymem_offset = ((((sizeof(struct s_map)) + (align_boundary - 1)) / align_boundary) * align_boundary);
 	const int valuemem_offset = keymem_offset + ((((map_size * key_size) + (align_boundary - 1)) / align_boundary) * align_boundary);
@@ -491,7 +477,7 @@ static int mapMemInit(struct s_map *map, const int mem_size, const int map_size,
 
 
 // Allocate memory for the map.
-static int mapCreate(struct s_map *map, const int map_size, const int key_size, const int value_size) {
+int mapCreate(struct s_map *map, const int map_size, const int key_size, const int value_size) {
 	// check parameters
 	if(!((map_size > 0) && (key_size > 0) && (value_size > 0))) return 0;
 
@@ -519,7 +505,7 @@ static int mapCreate(struct s_map *map, const int map_size, const int key_size, 
 
 
 // Free the memory used by the map.
-static int mapDestroy(struct s_map *map) {
+int mapDestroy(struct s_map *map) {
 	// destroy map
 	if(!((map != NULL) && (map->key != NULL) && (map->value != NULL) && (map->left != NULL) && (map->right != NULL))) return 0;
 	idspDestroy(&map->idsp);

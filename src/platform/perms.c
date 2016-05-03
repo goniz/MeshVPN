@@ -16,9 +16,13 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 
+#include "platform.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 #ifdef WIN32
-	static void dropPrivileges(char *username, char *groupname, char *chrootdir) {
+    void dropPrivileges(char *username, char *groupname, char *chrootdir) {
 		int error = 0;
 		if(strlen(username) > 0) {
 			error = 1;
@@ -33,7 +37,7 @@
 			throwError("UID/GID switching not implemented in windows version!\n");
 		}
 	}
-	static void dropPrivilegesAuto() {
+    void dropPrivilegesAuto() {
 		HANDLE h_process;
 		HANDLE h_token;
 		h_process = GetCurrentProcess();
@@ -51,7 +55,7 @@
 
 
 // drop privileges
-static void dropPrivileges(char *username, char *groupname, char *chrootdir) {
+void dropPrivileges(char *username, char *groupname, char *chrootdir) {
 	struct passwd *pwd = NULL;
 	struct group *grp = NULL;
 
@@ -82,7 +86,7 @@ static void dropPrivileges(char *username, char *groupname, char *chrootdir) {
 
 
 // drop privileges (automatic version, without specified user and group name)
-static void dropPrivilegesAuto() {
+void dropPrivilegesAuto() {
 	const char usernames[2][8] = { "nobody", "nogroup" };
 	const int userids[2] = { 65534, 65533 };
 	struct passwd *pwd = NULL;
