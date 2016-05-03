@@ -29,7 +29,6 @@
 #include "libp2psec/p2psec.c"
 #include "platform/io.c"
 #include "platform/ifconfig.c"
-#include "platform/seccomp.c"
 #include "include/globals.h"
 #include "include/rsa.h"
 #include "console.ic"
@@ -49,6 +48,7 @@ int main(int argc, char **argv) {
 	struct s_initconfig config;
 
 	// default configuration
+<<<<<<< HEAD:src/meshvpn.c
 	strcpy(config.tapname,"");
 	strcpy(config.ifconfig4,"");
 	strcpy(config.ifconfig6,"");
@@ -82,6 +82,9 @@ int main(int argc, char **argv) {
 	config.sockmark = 0;
 	config.enablepidfile = 0;
 	setbuf(stdout,NULL);
+=======
+    setbuf(stdout,NULL);
+>>>>>>> several initpeers now allowed, seccomp fixed:peervpn.c
 
 	confok = 0;
 	if(argc != 2) {
@@ -136,6 +139,7 @@ int main(int argc, char **argv) {
 		fprintf(fp, "%d", pid);
 		fclose(fp);
 	}
+    
 	// start vpn node
 	init(&config);
 	return 0;

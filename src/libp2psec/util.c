@@ -179,10 +179,21 @@ void utilWriteInt64(unsigned char *buf, int64_t i) {
 }
 
 
+
+
 // Get clock value in seconds
 int utilGetClock() {
 	return time(NULL);
 }
 
+int isWhitespaceChar(char c) {
+    switch(c) {
+        case ' ':
+        case '\t':
+            return 1;
+        default:
+            return 0;
+    }
+}
 
 #endif // F_UTIL_C

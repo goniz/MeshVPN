@@ -58,4 +58,6 @@ void utilWriteInt64(unsigned char *buf, int64_t i);
 // Get clock value in seconds
 int utilGetClock();
 
+int isWhitespaceChar(char c);
+
 #endif // H_UTIL

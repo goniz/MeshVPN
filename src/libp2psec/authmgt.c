@@ -268,8 +268,7 @@ static int authmgtDecodeMsg(struct s_authmgt *mgt, const unsigned char *msg, con
 	int newsession;
 	int dupid;
     
-    char humanIp[60];
-    peeraddrToHuman(humanIp, peeraddr);
+    CREATE_HUMAN_IP(peeraddr);
     
     debugf("[%s] AUTH message received", humanIp);
     

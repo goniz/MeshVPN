@@ -15,49 +15,31 @@
  *   You should have received a copy of the GNU General Public License     *
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
-#include "include/logging.h"
+#include "logging.h"
+#include "globals.h"
+#include "io.h"
+#include "platform.h"
 
 // Connect initpeers.
-static void connectInitpeers() {
-	int i,j,k,l;
+void connectInitpeers(struct s_initpeers * peers) {
 	char *hostname = NULL;
 	char *port = NULL;
 	struct s_io_addrinfo new_peeraddrs;
-	i=0;j=0;k=0;l=0;
-	
-	for(;;) {
-		j = g_initpeers[i];
-		if(!((j > 0) && (i+j+1 < INITPEER_STORAGE))) {
-			break;
-		}
-
-		if(k) {
-			port = &g_initpeers[i+1];
-			msgf("Connecting to initial peer %s:%s", hostname, port);
-			
-			if(ioResolveName(&new_peeraddrs, hostname, port)) {
-				for(l=0; l<new_peeraddrs.count; l++) {
-					if(p2psecConnect(g_p2psec,new_peeraddrs.item[l].addr)) {
-						msgf("Established connection with %s:%s", hostname, port);
-					} else {
-						msgf("Failed to establish connection with %s:%s", hostname, port);
-					}
-				}
-			} else {
-				printf("             failed: name could not be resolved.\n");
-			}
-			k=0;
-		} else {
-			hostname = &g_initpeers[i+1];
-			k=1;
-		}
-		i=i+j+1;
-	}
+    
+    int i = 0;
+    for(i = 0; i < peers->count; i++) {
+        debugf("connecting new peer %d", i );
+        if(p2psecConnect(g_p2psec,peers->addresses[i].addr)) {
+            msgf("initiated new connection");
+        } else {
+            msgf("failed to initiate connection");
+        }
+    }
 }
 
 
 // the mainloop
-static void mainLoop() {
+static void mainLoop(struct s_initpeers * peers) {
 	int fd;
 	int tnow;
 	unsigned char sockdata_buf[4096];
@@ -222,10 +204,10 @@ static void mainLoop() {
 			}
 		}
 		
-                // connect initpeers
+        // connect initpeers
 		if(((tnow - lastinit) > 30) && (!(mapGetKeyCount(&g_p2psec->mgt.map) > 1))) {
 			lastinit = tnow;
-			connectInitpeers();
+			connectInitpeers(peers);
 		}
 		
 		// check console

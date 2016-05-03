@@ -16,6 +16,10 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 
+#ifndef H_CONFIG
+#define H_CONFIG
+
+#define INITPEERS_MAX 256
 
 struct s_initconfig {
 	char sourceip[CONFPARSER_NAMEBUF_SIZE+1];
@@ -28,7 +32,12 @@ struct s_initconfig {
 	char ifconfig4[CONFPARSER_NAMEBUF_SIZE+1];
 	char ifconfig6[CONFPARSER_NAMEBUF_SIZE+1];
 	char upcmd[CONFPARSER_NAMEBUF_SIZE+1];
-	char initpeers[CONFPARSER_NAMEBUF_SIZE+1];
+    
+    // list of inital peers, we can have several of them active
+	char * initpeers[INITPEERS_MAX];
+    // counter of initial peers
+    int initpeerscount;
+    
 	char engines[CONFPARSER_NAMEBUF_SIZE+1];
 	char password[CONFPARSER_NAMEBUF_SIZE+1];
 	char pidfile[CONFPARSER_NAMEBUF_SIZE+1];
@@ -49,23 +58,13 @@ struct s_initconfig {
 	int enablesyslog;
 	int forceseccomp;
 	int daemonize;
-        int enableconsole;
+    int enableconsole;
 	int sockmark;
 };
 
 static void throwError(char *msg) {
 	if(msg != NULL) printf("error: %s\n",msg);
 	exit(1);
-}
-
-static int isWhitespaceChar(char c) {
-	switch(c) {
-		case ' ':
-		case '\t':
-			return 1;
-		default:
-			return 0;
-	}
 }
 
 static int parseConfigInt(char *str) {
@@ -197,7 +196,11 @@ static int parseConfigLine(char *line, int len, struct s_initconfig *cs) {
 		return 1;
 	}
 	else if(parseConfigLineCheckCommand(line,len,"initpeers",&vpos)) {
-		strncpy(cs->initpeers,&line[vpos],CONFPARSER_NAMEBUF_SIZE);
+        cs->initpeers[cs->initpeerscount] = malloc(sizeof(char) * CONFPARSER_NAMEBUF_SIZE);
+		strncpy(cs->initpeers[cs->initpeerscount],&line[vpos],CONFPARSER_NAMEBUF_SIZE);
+        cs->initpeerscount++;
+        debug("detected new init peers");
+        
 		return 1;
 	}
 	else if(parseConfigLineCheckCommand(line,len,"engine",&vpos)) {
@@ -349,6 +352,41 @@ static void parseConfigFile(int fd, struct s_initconfig *cs) {
 	int waiteol = 0;
 	int rc;
 	int readlen;
+    
+    strcpy(cs->tapname,"");
+    strcpy(cs->ifconfig4,"");
+    strcpy(cs->ifconfig6,"");
+    strcpy(cs->upcmd,"");
+    strcpy(cs->sourceip,"");
+    strcpy(cs->sourceport,"");
+    strcpy(cs->userstr,"");
+    strcpy(cs->groupstr,"");
+    strcpy(cs->chrootstr,"");
+    strcpy(cs->networkname,"PEERVPN");
+    strcpy(cs->engines,"");
+    strcpy(cs->pidfile, "");
+    strcpy(cs->privatekey, "/var/run/peervpn.pem");
+    
+    cs->password_len = 0;
+    cs->enablepidfile = 0;
+    cs->enableeth = 1;
+    cs->enablendpcache = 0;
+    cs->enablevirtserv = 0;
+    cs->enablerelay = 0;
+    cs->enableindirect = 0;
+    cs->enableconsole = 0;
+    cs->enableseccomp = 0;
+    cs->forceseccomp = 0;
+    cs->daemonize = 0;
+    cs->enableprivdrop = 1;
+    cs->enableipv4 = 1;
+    cs->enableipv6 = 1;
+    cs->enablenat64clat = 0;
+    cs->enablesyslog = 0;
+    cs->sockmark = 0;
+    cs->enablepidfile = 0;
+    cs->initpeerscount = 0;
+    
 	do {
 		readlen = read(fd,&c,1);
 		if(!(readlen > 0)) {
@@ -395,3 +433,5 @@ static void parseConfigFile(int fd, struct s_initconfig *cs) {
 	}
 	while(readlen > 0);
 }
+
+#endif
