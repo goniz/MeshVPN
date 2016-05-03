@@ -1,5 +1,7 @@
 # PeerVPN
 
+You can open issues if you have any problems with this app.
+
 PeerVPN is a full-mesh VPN solution with simple configuration files. 
 
 Features:
