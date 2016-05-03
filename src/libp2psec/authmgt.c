@@ -20,16 +20,18 @@
 #ifndef F_AUTHMGT_C
 #define F_AUTHMGT_C
 
+#include "logging.h"
 
-#include "auth.c"
+#include "auth.h"
 #include "peeraddr.c"
 #include "idsp.c"
-#include "../include/logging.h"
 
 // Timeouts.
 #define authmgt_RECV_TIMEOUT 30
 #define authmgt_RESEND_TIMEOUT 3
 
+#define AUTHMGT_RECV_TIMEOUT 30
+#define AUTHMGT_RESEND_TIMEOUT 3
 
 // The auth manager structure.
 struct s_authmgt {
@@ -68,7 +70,11 @@ static int authmgtNew(struct s_authmgt *mgt, const struct s_peeraddr *peeraddr) 
 	mgt->lastsend[authstateid] = (mgt->fastauth) ? (tnow - authmgt_RESEND_TIMEOUT - 3) : tnow;
 	mgt->lastrecv[authstateid] = tnow;
 	mgt->peeraddr[authstateid] = *peeraddr;
-	return authstateid;
+    
+    CREATE_HUMAN_IP(peeraddr);
+    debugf("Starting new auth session for %s, ID: %d", humanIp, authstateid);
+	
+    return authstateid;
 }
 
 
@@ -199,21 +205,29 @@ static int authmgtGetNextMsg(struct s_authmgt *mgt, struct s_msg *out_msg, struc
 	int tnow = utilGetClock();
 	int authstateid;
 	int i;
+    
 	for(i=0; i<used; i++) {
 		authstateid = idspNext(&mgt->idsp);
-		if((tnow - mgt->lastrecv[authstateid]) < authmgt_RECV_TIMEOUT) { // check if auth session has expired
-			if((tnow - mgt->lastsend[authstateid]) > authmgt_RESEND_TIMEOUT) { // only send one auth message per specified time interval and session
-				if(authGetNextMsg(&mgt->authstate[authstateid], out_msg)) {
-					mgt->lastsend[authstateid] = tnow;
-					*target = mgt->peeraddr[authstateid];
-					return 1;
-				}
-			}
-		}
-		else {
-			authmgtDelete(mgt, authstateid);
-		}
-	}
+		if((tnow - mgt->lastrecv[authstateid]) >= AUTHMGT_RECV_TIMEOUT) { // check if auth session has expired
+            authmgtDelete(mgt, authstateid);
+            continue;
+        }
+        
+        if((tnow - mgt->lastsend[authstateid]) <= AUTHMGT_RESEND_TIMEOUT) { // only send one auth message per specified time interval and session
+            continue;
+        }
+        
+        if(authGetNextMsg(&mgt->authstate[authstateid], out_msg)) {
+            mgt->lastsend[authstateid] = tnow;
+            *target = mgt->peeraddr[authstateid];
+            
+            CREATE_HUMAN_IP(target);
+            debugf("[%d] New AUTH packet for %s created, size: %d", authstateid, humanIp, out_msg->len);
+            
+            return 1;
+        }
+    }
+    
 	return 0;
 }
 
@@ -270,7 +284,6 @@ static int authmgtDecodeMsg(struct s_authmgt *mgt, const unsigned char *msg, con
         authstateid = (authid - 1);
         
         debugf("Found active auth session: %d", authstateid);
-        
         if(authstateid >= idspSize(&mgt->idsp)) {
             debugf("[%s] wrong auth state ID", humanIp);
             return 0;
@@ -286,8 +299,13 @@ static int authmgtDecodeMsg(struct s_authmgt *mgt, const unsigned char *msg, con
         if(mgt->fastauth) {
             mgt->lastsend[authstateid] = (tnow - authmgt_RESEND_TIMEOUT - 3);
         }
+        
         if((authIsAuthed(&mgt->authstate[authstateid])) && (!authIsCompleted(&mgt->authstate[authstateid]))) mgt->current_authed_id = authstateid;
-        if((authIsCompleted(&mgt->authstate[authstateid])) && (!authIsPeerCompleted(&mgt->authstate[authstateid]))) mgt->current_completed_id = authstateid;
+        
+        if((authIsCompleted(&mgt->authstate[authstateid])) && (!authIsPeerCompleted(&mgt->authstate[authstateid]))) {
+            msgf("Host %s authorized", humanIp);
+            mgt->current_completed_id = authstateid;
+        }
         
         return 1;
     } else if(authid == 0) {
@@ -313,6 +331,7 @@ static int authmgtDecodeMsg(struct s_authmgt *mgt, const unsigned char *msg, con
                 authstateid = authmgtNew(mgt, peeraddr);
             }
         }
+        
         if(!(authstateid < 0)) {
             if(authDecodeMsg(&mgt->authstate[authstateid], msg, msg_len)) {
                 mgt->lastrecv[authstateid] = tnow;

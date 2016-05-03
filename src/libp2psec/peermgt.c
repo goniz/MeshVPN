@@ -25,6 +25,7 @@
 #include "authmgt.c"
 #include "packet.c"
 #include "dfrag.c"
+#include <time.h>
 
 
 // Minimum message size supported (without fragmentation).
@@ -334,21 +335,24 @@ static void peermgtDeleteID(struct s_peermgt *mgt, const int peerid) {
 // Connect to a new peer.
 static int peermgtConnect(struct s_peermgt *mgt, const struct s_peeraddr *remote_addr) {
 	if(remote_addr == NULL) {
+        debug("failed to connect tot peer, remote_addr is NULL");
         return 0;
     }
     
     if(peeraddrIsInternal(remote_addr) && !peermgtIsValidIndirectPeerAddr(mgt, remote_addr)) {
+        debug("failed to connect to peer because remote_addr is internal or not valid");
         return 0;
     }
     
 
     if(!authmgtStart(&mgt->authmgt, remote_addr)) {
+        debug("failed to start AUTH connection");
         return 0;
     }
     
-    char visibleIp[64];
-    peeraddrToHuman(visibleIp, remote_addr);
-    debugf("New connection initiated to %s", visibleIp);
+    CREATE_HUMAN_IP(remote_addr);
+    debugf("New connection initiated to %s", humanIp);
+    
     return 1;
 }
 
@@ -481,9 +485,8 @@ static int peermgtGetNextPacketGen(struct s_peermgt *mgt, unsigned char *pbuf, c
 	struct s_packet_data data;
 	struct s_nodeid *nodeid;
 	struct s_peeraddr *peeraddr;
-    char humanIp[60];
     
-    peeraddrToHuman(humanIp, target);
+    CREATE_HUMAN_IP(target);
 
 	// send out user data
 	outlen = mgt->outmsg.len;

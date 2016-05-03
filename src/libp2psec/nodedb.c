@@ -23,7 +23,7 @@
 
 #include "map.c"
 #include "peeraddr.c"
-#include "nodeid.c"
+#include "../include/nodeid.h"
 #include "peeraddr.c"
 #include "util.c"
 
