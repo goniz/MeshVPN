@@ -21,28 +21,15 @@
 #define F_DH_C
 
 
-#include "../include/crypto.h"
+#include "../../include/crypto.h"
+#include "../../include/dh.h"
+
 #include <openssl/dh.h>
 #include <openssl/pem.h>
 #include <openssl/bn.h>
 
-
-// Maximum and minimum sizes of DH public key in bytes.
-#define dh_MINSIZE 96
-#define dh_MAXSIZE 768
-
-
-// The DH state structure.
-struct s_dh_state {
-	DH *dh;
-	BIGNUM *bn;
-	unsigned char pubkey[dh_MAXSIZE];
-	int pubkey_size;
-};
-
-
 // Load DH parameters.
-static int dhLoadParams(struct s_dh_state *dhstate, unsigned char *dhpem, const int dhpem_size) {
+int dhLoadParams(struct s_dh_state *dhstate, unsigned char *dhpem, const int dhpem_size) {
 	DH *dhptr = dhstate->dh;
 	BIO *biodh;
 	int ret;
@@ -63,7 +50,7 @@ static int dhLoadParams(struct s_dh_state *dhstate, unsigned char *dhpem, const 
 
 
 // Load default DH parameters.
-static int dhLoadDefaultParams(struct s_dh_state *dhstate) {
+int dhLoadDefaultParams(struct s_dh_state *dhstate) {
 	char *defaultdh = "-----BEGIN DH PARAMETERS-----\n\
 MIIBCAKCAQEA06t5J/XwK39BbRJ5TyktEk+9VL3jHXlUgbnm6BEcdPAB+6h48gNN\n\
 ZEAt0eFLK8hUWeO3BBqy6cLNfDWFRvoigVfZejnRaVXONWcviJJ1EGnYHI5m0Pw/\n\
@@ -80,7 +67,7 @@ CXzWzPkElg5L22pMUCPfYxo10HKoUHmSYwIBAg==\n\
 
 
 // Generate a key.
-static int dhGenKey(struct s_dh_state *dhstate) {
+int dhGenKey(struct s_dh_state *dhstate) {
 	BIGNUM *bn;
 	int bn_size;
 	if(DH_generate_key(dhstate->dh)) {
@@ -102,7 +89,7 @@ static int dhGenKey(struct s_dh_state *dhstate) {
 
 
 // Create a DH state object.
-static int dhCreate(struct s_dh_state *dhstate) {
+int dhCreate(struct s_dh_state *dhstate) {
 	dhstate->bn = BN_new();
 	if(dhstate->bn != NULL) {
 		BN_zero(dhstate->bn);
@@ -123,7 +110,7 @@ static int dhCreate(struct s_dh_state *dhstate) {
 
 
 // Destroy a DH state object.
-static void dhDestroy(struct s_dh_state *dhstate) {
+void dhDestroy(struct s_dh_state *dhstate) {
 	DH_free(dhstate->dh);
 	BN_free(dhstate->bn);
 	dhstate->pubkey_size = 0;
@@ -131,13 +118,13 @@ static void dhDestroy(struct s_dh_state *dhstate) {
 
 
 // Get size of binary encoded DH public key in bytes.
-static int dhGetPubkeySize(const struct s_dh_state *dhstate) {
+int dhGetPubkeySize(const struct s_dh_state *dhstate) {
 	return dhstate->pubkey_size;
 }
 
 
 // Get binary encoded DH public key. Returns length if successful.
-static int dhGetPubkey(unsigned char *buf, const int buf_size, const struct s_dh_state *dhstate) {
+int dhGetPubkey(unsigned char *buf, const int buf_size, const struct s_dh_state *dhstate) {
 	int dhsize = dhGetPubkeySize(dhstate);
 	if((dhsize > dh_MINSIZE) && (dhsize < buf_size)) {
 		memcpy(buf, dhstate->pubkey, dhsize);
@@ -150,7 +137,7 @@ static int dhGetPubkey(unsigned char *buf, const int buf_size, const struct s_dh
 
 
 // Generate symmetric keys. Returns 1 if succesful.
-static int dhGenCryptoKeys(struct s_crypto *ctx, const int ctx_count, const struct s_dh_state *dhstate, const unsigned char *peerkey, const int peerkey_len, const unsigned char *nonce, const int nonce_len) {
+int dhGenCryptoKeys(struct s_crypto *ctx, const int ctx_count, const struct s_dh_state *dhstate, const unsigned char *peerkey, const int peerkey_len, const unsigned char *nonce, const int nonce_len) {
 	BIGNUM *bn = dhstate->bn;
 	DH *dh = dhstate->dh;
 	int ret = 0;

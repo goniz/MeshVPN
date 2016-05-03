@@ -25,7 +25,7 @@
 #include "seq.c"
 #include "netid.c"
 #include "nodeid.c"
-#include "dh.c"
+#include "../include/dh.h"
 #include "../include/logging.h"
 #include "../include/rsa.h"
 
@@ -517,6 +517,8 @@ static int authDecodeS4(struct s_auth_state *authstate, const unsigned char *msg
             }
         }
     }
+    
+    debug("failed to verify something");
 
 	return 0;
 }
@@ -577,7 +579,6 @@ static int authDecodeMsg(struct s_auth_state *authstate, const unsigned char *ms
     
     if(state == AUTH_STATE_FINISHED) {
         debug("Auth confirmation received");
-        authGenMsg(authstate);
         return 1;
     }
 	
@@ -655,23 +656,13 @@ static int authIsAuthed(struct s_auth_state *authstate) {
 
 // Check if peer is authenticated & connection parameters are negotiated.
 static int authIsCompleted(struct s_auth_state *authstate) {
-	if(authstate->state >= auth_S3b) {
-		return 1;
-	}
-	else {
-		return 0;
-	}
+    return (authstate->state >= auth_S3b);
 }
 
 
 // Check if peer has completed the authentication.
 static int authIsPeerCompleted(struct s_auth_state *authstate) {
-	if(authstate->state >= auth_S4b) {
-		return 1;
-	}
-	else {
-		return 0;
-	}
+    return (authstate->state >= auth_S4b);
 }
 
 

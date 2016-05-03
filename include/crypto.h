@@ -66,8 +66,6 @@ struct s_crypto_cipher cryptoGetEVPCipher(const EVP_CIPHER *cipher);
 // return EVP md
 struct s_crypto_md cryptoGetEVPMD(const EVP_MD *md);
 
-// initialize random number generator
-extern int cryptoRandFD;
 int cryptoRandInit();
 
 // generate random bytes

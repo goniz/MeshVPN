@@ -253,6 +253,7 @@ static int authmgtDecodeMsg(struct s_authmgt *mgt, const unsigned char *msg, con
 	int tnow = utilGetClock();
 	int newsession;
 	int dupid;
+    
     char humanIp[60];
     peeraddrToHuman(humanIp, peeraddr);
     
@@ -267,6 +268,9 @@ static int authmgtDecodeMsg(struct s_authmgt *mgt, const unsigned char *msg, con
     if(authid > 0) {
         // message belongs to existing auth session
         authstateid = (authid - 1);
+        
+        debugf("Found active auth session: %d", authstateid);
+        
         if(authstateid >= idspSize(&mgt->idsp)) {
             debugf("[%s] wrong auth state ID", humanIp);
             return 0;
@@ -331,12 +335,7 @@ static int authmgtDecodeMsg(struct s_authmgt *mgt, const unsigned char *msg, con
 
 // Enable/disable fastauth (ignore send timeout after auth status change)
 static void authmgtSetFastauth(struct s_authmgt *mgt, const int enable) {
-	if(enable) {
-		mgt->fastauth = 1;
-	}
-	else {
-		mgt->fastauth = 0;
-	}
+    mgt->fastauth = (enable);
 }
 
 
@@ -347,10 +346,13 @@ static void authmgtReset(struct s_authmgt *mgt) {
 	for(i=0; i<count; i++) {
 		authReset(&mgt->authstate[i]);
 	}
+    
 	idspReset(&mgt->idsp);
 	mgt->fastauth = 0;
 	mgt->current_authed_id = -1;
 	mgt->current_completed_id = -1;
+    
+    debug("auth manager RESET completed");
 }
 
 
@@ -382,33 +384,42 @@ static int authmgtCreate(struct s_authmgt *mgt, struct s_netid *netid, const int
     }
     
     authstate_mem = malloc(sizeof(struct s_auth_state) * auth_slots);
-    if(authstate_mem != NULL) {
-        peeraddr_mem = malloc(sizeof(struct s_peeraddr) * auth_slots);
-        if(peeraddr_mem != NULL) {
-            ac = 0;
-            while(ac < auth_slots) {
-                if(!authCreate(&authstate_mem[ac], netid, local_nodekey, dhstate, (ac + 1))) break;
-                ac++;
-            }
-            if(!(ac < auth_slots)) {
-                if(idspCreate(&mgt->idsp, auth_slots)) {
-                    mgt->lastsend = lastsend_mem;
-                    mgt->lastrecv = lastrecv_mem;
-                    mgt->authstate = authstate_mem;
-                    mgt->peeraddr = peeraddr_mem;
-                    authmgtReset(mgt);
-                    return 1;
-                }
-            }
-            while(ac > 0) {
-                ac--;
-                authDestroy(&authstate_mem[ac]);
-            }
-            free(peeraddr_mem);
-        }
+    
+    if(authstate_mem == NULL) {
         free(authstate_mem);
+        debug("failed to allocate memory for authstate");
+        return 0;
     }
     
+    peeraddr_mem = malloc(sizeof(struct s_peeraddr) * auth_slots);
+    if(peeraddr_mem == NULL) {
+        free(authstate_mem); free(peeraddr_mem);
+        debug("failed to allocate memory for peeraddr_mem");
+        return 0;
+    }
+    
+    ac = 0;
+    while(ac < auth_slots) {
+        if(!authCreate(&authstate_mem[ac], netid, local_nodekey, dhstate, (ac + 1))) break;
+        ac++;
+    }
+    
+    if(!(ac < auth_slots)) {
+        if(idspCreate(&mgt->idsp, auth_slots)) {
+            mgt->lastsend = lastsend_mem;
+            mgt->lastrecv = lastrecv_mem;
+            mgt->authstate = authstate_mem;
+            mgt->peeraddr = peeraddr_mem;
+            authmgtReset(mgt);
+            return 1;
+        }
+    }
+    while(ac > 0) {
+        ac--;
+        authDestroy(&authstate_mem[ac]);
+    }
+    
+
     return 0;
 }
 
