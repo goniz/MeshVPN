@@ -376,25 +376,30 @@ void authGenS3(struct s_auth_state *authstate) {
 	int unencrypted_nextmsg_size = (4 + 2 + auth_NONCESIZE + seq_SIZE + 4 + 8);
 	int msgnum = authstate->state;
 	int encsize;
-	if(authstate->local_cneg_set) {
-		memcpy(unencrypted_nextmsg, authstate->remote_authid, 4);
-		utilWriteInt16(&unencrypted_nextmsg[4], msgnum);
-		memcpy(authstate->nextmsg, unencrypted_nextmsg, 6);
-		memcpy(&unencrypted_nextmsg[(4 + 2)], authstate->local_keygen_nonce, auth_NONCESIZE);
-		memcpy(&unencrypted_nextmsg[(4 + 2 + auth_NONCESIZE)], authstate->local_seq, seq_SIZE);
-		utilWriteInt32(&unencrypted_nextmsg[(4 + 2 + auth_NONCESIZE + seq_SIZE)], authstate->local_peerid);
-		memcpy(&unencrypted_nextmsg[(4 + 2 + auth_NONCESIZE + seq_SIZE + 4)], authstate->local_flags, 8);
-		encsize = cryptoEnc(&authstate->crypto_ctx[auth_CRYPTOCTX_CNEG], &authstate->nextmsg[(4 + 2)], (auth_MAXMSGSIZE - 2 - 4), &unencrypted_nextmsg[(4 + 2)], (unencrypted_nextmsg_size - 2 - 4), auth_CNEGHMACSIZE, auth_CNEGIVSIZE);
-		if(encsize > 0) {
-			authstate->nextmsg_size = (encsize + 4 + 2);
-		}
-		else {
-			authstate->nextmsg_size = 0;
-		}
-	}
-	else {
-		authstate->nextmsg_size = 0;
-	}
+    
+	if(!authstate->local_cneg_set) {
+        authstate->nextmsg_size = 0;
+        debug("S3 generation failed");
+        return;
+    }
+    
+    memcpy(unencrypted_nextmsg, authstate->remote_authid, 4);
+    utilWriteInt16(&unencrypted_nextmsg[4], msgnum);
+    memcpy(authstate->nextmsg, unencrypted_nextmsg, 6);
+    memcpy(&unencrypted_nextmsg[(4 + 2)], authstate->local_keygen_nonce, auth_NONCESIZE);
+    memcpy(&unencrypted_nextmsg[(4 + 2 + auth_NONCESIZE)], authstate->local_seq, seq_SIZE);
+    utilWriteInt32(&unencrypted_nextmsg[(4 + 2 + auth_NONCESIZE + seq_SIZE)], authstate->local_peerid);
+    memcpy(&unencrypted_nextmsg[(4 + 2 + auth_NONCESIZE + seq_SIZE + 4)], authstate->local_flags, 8);
+    encsize = cryptoEnc(&authstate->crypto_ctx[auth_CRYPTOCTX_CNEG], &authstate->nextmsg[(4 + 2)], (auth_MAXMSGSIZE - 2 - 4), &unencrypted_nextmsg[(4 + 2)], (unencrypted_nextmsg_size - 2 - 4), auth_CNEGHMACSIZE, auth_CNEGIVSIZE);
+    
+    if(encsize <= 0) {
+        authstate->nextmsg_size = 0;
+        debug("S3 generation failed, wrong encrypted data size");
+        return;
+    }
+    
+    debug("S3 generation successfull");
+    authstate->nextmsg_size = (encsize + 4 + 2);
 }
 
 
@@ -402,29 +407,42 @@ void authGenS3(struct s_auth_state *authstate) {
 int authDecodeS3(struct s_auth_state *authstate, const unsigned char *msg, const int msg_len) {
 	int msgnum;
 	int decmsg_len;
+    int expected_state;
+    
 	unsigned char decmsg[auth_MAXMSGSIZE_S3];
-	if(msg_len > 6) {
-		memcpy(decmsg, msg, 6);
-		msgnum = utilReadInt16(&decmsg[4]);
-		if(msgnum == (authstate->state + 1)) {
-			decmsg_len = (4 + 2 + cryptoDec(&authstate->crypto_ctx[auth_CRYPTOCTX_CNEG], &decmsg[(4 + 2)], (auth_MAXMSGSIZE_S3 - 2 - 4), &msg[(4 + 2)], (msg_len - 2 - 4), auth_CNEGHMACSIZE, auth_CNEGIVSIZE));
-			if(decmsg_len >= (4 + 2 + auth_NONCESIZE + seq_SIZE + 4 + 8)) {
-				memcpy(authstate->remote_keygen_nonce, &decmsg[(4 + 2)], auth_NONCESIZE);
-				if((msgnum % 2) == 0) {
-					memcpy(&authstate->keygen_nonce[0], authstate->local_keygen_nonce, auth_NONCESIZE);
-					memcpy(&authstate->keygen_nonce[auth_NONCESIZE], authstate->remote_keygen_nonce, auth_NONCESIZE);
-				}
-				else {
-					memcpy(&authstate->keygen_nonce[0], authstate->remote_keygen_nonce, auth_NONCESIZE);
-					memcpy(&authstate->keygen_nonce[auth_NONCESIZE], authstate->local_keygen_nonce, auth_NONCESIZE);
-				}
-				memcpy(authstate->remote_seq, &decmsg[(4 + 2 + auth_NONCESIZE)], seq_SIZE);
-				authstate->remote_peerid = utilReadInt32(&decmsg[(4 + 2 + auth_NONCESIZE + seq_SIZE)]);
-				memcpy(authstate->remote_flags, &decmsg[(4 + 2 + auth_NONCESIZE + seq_SIZE + 4)], 8);
-				return 1;
-			}
-		}
-	}
+	if(msg_len <= 6) {
+        debugf("S3 message verification failed. Wrong size: %d", msg_len );
+        return 0;
+    }
+    
+    
+    memcpy(decmsg, msg, 6);
+    msgnum = utilReadInt16(&decmsg[4]);
+    
+    expected_state = authstate->state + 1;
+    if(msgnum != expected_state) {
+        debugf("S3 verification failed. Got state %d insead of ", msgnum, expected_state);
+        return 0;
+    }
+    
+    decmsg_len = (4 + 2 + cryptoDec(&authstate->crypto_ctx[auth_CRYPTOCTX_CNEG], &decmsg[(4 + 2)], (auth_MAXMSGSIZE_S3 - 2 - 4), &msg[(4 + 2)], (msg_len - 2 - 4), auth_CNEGHMACSIZE, auth_CNEGIVSIZE));
+    
+    if(decmsg_len >= (4 + 2 + auth_NONCESIZE + seq_SIZE + 4 + 8)) {
+        memcpy(authstate->remote_keygen_nonce, &decmsg[(4 + 2)], auth_NONCESIZE);
+        if((msgnum % 2) == 0) {
+            memcpy(&authstate->keygen_nonce[0], authstate->local_keygen_nonce, auth_NONCESIZE);
+            memcpy(&authstate->keygen_nonce[auth_NONCESIZE], authstate->remote_keygen_nonce, auth_NONCESIZE);
+        }
+        else {
+            memcpy(&authstate->keygen_nonce[0], authstate->remote_keygen_nonce, auth_NONCESIZE);
+            memcpy(&authstate->keygen_nonce[auth_NONCESIZE], authstate->local_keygen_nonce, auth_NONCESIZE);
+        }
+        memcpy(authstate->remote_seq, &decmsg[(4 + 2 + auth_NONCESIZE)], seq_SIZE);
+        authstate->remote_peerid = utilReadInt32(&decmsg[(4 + 2 + auth_NONCESIZE + seq_SIZE)]);
+        memcpy(authstate->remote_flags, &decmsg[(4 + 2 + auth_NONCESIZE + seq_SIZE + 4)], 8);
+        return 1;
+    }
+
 	return 0;
 }
 

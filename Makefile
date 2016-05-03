@@ -1,5 +1,5 @@
-CFLAGS+=-O2 -DDEBUG -g -I ./include
-LIBS+=-lcrypto -lz
+CFLAGS+=-O2 -g -DSECCOMP_ENABLE -DDEBUG -I ./include
+LIBS+=-lcrypto -lz -lseccomp
 INC_DIR=./include
 DESTDIR="/usr/local"
 COMMIT=$(shell git log --format='%H' | head -n 1)
@@ -9,6 +9,7 @@ objects = src/encryption/rsa.o \
           src/encryption/dh.o \
           src/p2p/auth.o \
           src/p2p/nodeid.o \
+          src/platform/seccomp.o \
           peervpn.o \
           logging.o
 

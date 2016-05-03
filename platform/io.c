@@ -20,25 +20,7 @@
 #ifndef F_IO_C
 #define F_IO_C
 
-
-#if defined(__FreeBSD__)
-#define IO_BSD
-#elif defined(__APPLE__)
-#define IO_BSD
-#elif defined(WIN32)
-#define IO_WINDOWS
-#ifdef WINVER
-#if WINVER < 0x0501
-#undef WINVER
-#endif
-#endif
-#ifndef WINVER
-#define WINVER 0x0501
-#endif
-#else
-#define IO_LINUX
-#endif
-
+#include "io.h"
 
 #include <stdlib.h>
 #include <fcntl.h>
@@ -65,66 +47,6 @@
 #include <ws2tcpip.h>
 #include <winioctl.h>
 #endif
-
-
-#define IO_TYPE_NULL 0
-#define IO_TYPE_SOCKET_V6 1
-#define IO_TYPE_SOCKET_V4 2
-#define IO_TYPE_FILE 3
-
-#define IO_ADDRTYPE_NULL "\x00\x00\x00\x00"
-#define IO_ADDRTYPE_UDP6 "\x01\x06\x01\x00"
-#define IO_ADDRTYPE_UDP4 "\x01\x04\x01\x00"
-
-
-
-// The IO addr structure.
-struct s_io_addr {
-	unsigned char addr[24];
-};
-
-
-// The IO addrinfo structure.
-struct s_io_addrinfo {
-	struct s_io_addr item[16];
-	int count;
-};
-
-
-// The IO handle structure.
-struct s_io_handle {
-	int enabled;
-	int fd;
-	struct sockaddr_storage source_sockaddr;
-	struct s_io_addr source_addr;
-	int group_id;
-	int content_len;
-	int type;
-	int open;
-#if defined(IO_WINDOWS)
-	HANDLE fd_h;
-	int open_h;
-	OVERLAPPED ovlr;
-	int ovlr_used;
-	OVERLAPPED ovlw;
-	int ovlw_used;
-#endif
-};
-
-
-// The IO state structure.
-struct s_io_state {
-	unsigned char *mem;
-	struct s_io_handle *handle;
-	int bufsize;
-	int max;
-	int count;
-	int timeout;
-	int sockmark;
-	int nat64clat;
-	unsigned char nat64_prefix[12];
-	int debug;
-};
 
 
 // Returns length of string.

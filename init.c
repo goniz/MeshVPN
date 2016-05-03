@@ -15,7 +15,12 @@
  *   You should have received a copy of the GNU General Public License     *
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
-#include "include/logging.h"
+#include "logging.h"
+#include "config.c"
+#include "globals.h"
+#include "util.h"
+#include "io.h"
+
 #include <string.h>
 
 // handle termination signals
@@ -57,50 +62,85 @@ int loadengine(const char *engine_name) {
 	return 1;
 }
 
+/**
+ * Resolve addresses of initial peers
+ */
+int proceedInitPeers(const struct s_initconfig * cfg, struct s_initpeers * peers) {
+    debug("processing init peers");
+    
+    peers->addresses = malloc(sizeof(struct s_io_addr) * INITPEER_STORAGE);
+    peers->count = 0;
+    
+    int i;
+    for(i = 0; i < cfg->initpeerscount; i++) {
+        char * peer = cfg->initpeers[i];
+        
+        char hostname[256];
+        char port[6];
+        
+        strcpy(hostname,"");
+        strcpy(port, "");
+        
+        int c;
+        for(c = 0; c < strlen(peer); c++) {
+            if(isWhitespaceChar(peer[c]) || peer[c] == '\0') {
+                memcpy(hostname, peer, c);
+                hostname[c] = '\0';
+                
+                int port_len = ((strlen(peer) - c) > 5 ) ? 5 : strlen(peer) - c;
+                memcpy(port, &peer[c+1], port_len);
+                port[port_len] = '\0';
+                
+                break;
+            }
+        }
+        
+        if(strlen(hostname) == 0 || strlen(port) == 0) {
+            msgf("skipping bad initpeer: %s", peer );
+            continue;
+        }
+        
+        struct s_io_addrinfo new_peeraddrs;
+        if(!ioResolveName(&new_peeraddrs, hostname, port)) {
+            debugf("hostname %s is not resolvable, continue", hostname);
+        }
+        
+        debugf("hostname %s, port: %s, total addresses: %d", hostname, port, new_peeraddrs.count);
+        
+        int d;
+        for(d = 0; d < new_peeraddrs.count; d++) {
+            if(peers->count >= INITPEER_STORAGE) {
+                debug("Init peers is full. Exiting");
+                return 1;
+            }
+            
+            memcpy(&peers->addresses[peers->count], &new_peeraddrs.item[d], sizeof(struct s_io_addr));
+            peers->count++;
+        }
+    }
+    
+    msgf("Total %d initial peers found", peers->count);
+    
+    return 1;
+}
 
 // initialization sequence
 void init(struct s_initconfig *initconfig) {
 	int c,i,j,k,l,m;
 	char str[256];
 	char tapname[256];
+    struct s_initpeers peers;
+    
+    if(!proceedInitPeers(initconfig, &peers)) {
+        throwError("No init peers found or wrong configuration");
+    }
 
 	// create data structures
 	if(!ioCreate(&iostate, 4096, 4)) {
 		throwError("Could not initialize I/O backend!\n");
 	}
 	ioSetTimeout(&iostate, 1);
-
-	// load initpeers
-	i=0;j=0;k=0;l=0;m=0;
-	g_initpeers[0] = 0;
-	for(;;) {
-		c = initconfig->initpeers[i];
-		if(m) {
-			if(isWhitespaceChar(c) || c == '\0') {
-				k=i;
-				m=k-j;
-				if(m>0) {
-					if(m > 254) m = 254;
-					g_initpeers[l] = (m+1);
-					memcpy(&g_initpeers[l+1],&initconfig->initpeers[j],m);
-					g_initpeers[l+1+m] = '\0';
-					l = l+2+m;
-					g_initpeers[l] = 0;
-				}
-				m=0;
-			}
-			if(c == '\0') break;
-		}
-		else {
-			if(c == '\0') break;
-			if(!isWhitespaceChar(c)) {
-				m=1;
-				j=i;
-			}
-		}
-		i++;
-	}
-	
+    
 	// enable console
 	if(initconfig->enableconsole) {
 		if(!((j = (ioOpenSTDIN(&iostate))) < 0)) {
@@ -296,7 +336,7 @@ void init(struct s_initconfig *initconfig) {
 
 	// enter main loop
 	msg("Initialization finished, starting main loop");
-    mainLoop();
+    mainLoop(&peers);
     msg("Mainloop finished, closing down");
 
 	// shut down

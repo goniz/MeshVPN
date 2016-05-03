@@ -24,7 +24,12 @@
 #ifdef SECCOMP_ENABLE
 
 #include <seccomp.h>
-#include "../include/logging.h"
+#include "platform.h"
+#include "logging.h"
+#include <signal.h>
+#include <errno.h>
+#include <stdio.h>
+
 
 // Defines and loads seccomp filter. Returns 1 on success.
 static int seccompEnableDo(scmp_filter_ctx ctx) {
@@ -62,7 +67,7 @@ static int seccompEnableDo(scmp_filter_ctx ctx) {
 
 
 // Enables seccomp filtering. Returns 1 on success.
-static int seccompEnable() {
+int seccompEnable() {
 	int enabled;
 	scmp_filter_ctx filter;
 	filter = seccomp_init(SCMP_ACT_KILL);
@@ -79,7 +84,7 @@ static int seccompEnable() {
 
 
 // No seccomp support.
-static int seccompEnable() {
+int seccompEnable() {
 	msg("Seccomp support is not enable. Use SECCOMP_ENABLE during build");
 	return 0;
 }
