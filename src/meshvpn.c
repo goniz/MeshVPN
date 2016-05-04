@@ -26,7 +26,6 @@
 
 #include "rsa.h"
 #include "app.h"
-#include "pwd.ic"
 #include "logging.h"
 
 struct s_p2psec * g_p2psec = NULL;
