@@ -1,6 +1,6 @@
 Name: peervpn
 Version: 0.45
-Release: 0%{?dist}
+Release: 1%{?dist}
 Summary: PeerVPN allows you to create full-mesh VPN networks	
 
 Group: Applications/Internet	

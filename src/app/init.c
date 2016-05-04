@@ -196,43 +196,48 @@ void init(struct s_initconfig *initconfig) {
 		throwError("Could not open any sockets! This might be caused by:\n- another open socket on the same port\n- invalid port number and/or local IP address\n- insufficient privileges");
 	}
 
-	// open tap device
-	if(initconfig->enableeth) {
-		msg("Trying to open TAP device");
-		if((j = (ioOpenTAP(&iostate, tapname, initconfig->tapname))) < 0) {
-			g_enableeth = 0;
-			printf("   failed.\n");
-			throwError("The TAP device could not be opened! This might be caused by:\n- a missing TAP device driver,\n- a blocked TAP device (try a different name),\n- insufficient privileges (try running as the root/administrator user).");
-		}
-		else {
-			ioSetGroup(&iostate, j, IOGRP_TAP);
-			g_enableeth = 1;
-                        msgf("Opened TAP device %s", tapname);
-			
-                        if(strlen(initconfig->ifconfig4) > 0) {
-				// configure IPv4 address
-				if(!(ifconfig4(tapname, strlen(tapname), initconfig->ifconfig4, strlen(initconfig->ifconfig4)))) {
-					debug("Could not automatically configure IPv4 address!");
-				}
-			}
-			if(strlen(initconfig->ifconfig6) > 0) {
-				// configure IPv6 address
-				if(!(ifconfig6(tapname, strlen(tapname), initconfig->ifconfig6, strlen(initconfig->ifconfig6)))) {
-					debug("Could not automatically configure IPv6 address!");
-				}
-			}
-			if(strlen(initconfig->upcmd) > 0) {
-				// execute shell command
-				if((ifconfigExec(initconfig->upcmd)) < 0) {
-					debug("The command specified in the \"upcmd\" option returned an error!");
-				}
-			}
-		}
-                msg("Address configuration completed");
-	}
-	else {
-		g_enableeth = 0;
-	}
+    // open tap device
+    if(initconfig->enableeth) {
+        msg("Trying to open TAP device");
+        if((j = (ioOpenTAP(&iostate, tapname, initconfig->tapname))) < 0) {
+            g_enableeth = 0;
+            printf("   failed.\n");
+            throwError("The TAP device could not be opened! This might be caused by:\n- a missing TAP device driver,\n- a blocked TAP device (try a different name),\n- insufficient privileges (try running as the root/administrator user).");
+        } else {
+            ioSetGroup(&iostate, j, IOGRP_TAP);
+            g_enableeth = 1;
+            msgf("TAP device successfully opened: %s", tapname);
+            
+            if(strlen(initconfig->ifconfig4) > 0) {
+                // configure IPv4 address
+                if(!(ifconfig4(tapname, strlen(tapname), initconfig->ifconfig4, strlen(initconfig->ifconfig4)))) {
+                    debug("Could not automatically configure IPv4 address!");
+                }
+            }
+            
+            if(strlen(initconfig->ifconfig6) > 0) {
+                // configure IPv6 address
+                if(!(ifconfig6(tapname, strlen(tapname), initconfig->ifconfig6, strlen(initconfig->ifconfig6)))) {
+                    debug("Could not automatically configure IPv6 address!");
+                }
+            }
+            
+            if(strlen(initconfig->upcmd) > 0) {
+                msgf("running upcmd: %s", initconfig->upcmd);
+                
+                // execute shell command
+                if((ifconfigExec(initconfig->upcmd)) < 0) {
+                    msg("The command specified in the \"upcmd\" option returned an error!");
+                } else {
+                    msgf("command %s executed successfully", initconfig->upcmd);
+                }
+            }
+        }
+        msg("Address configuration completed");
+    }
+    else {
+        g_enableeth = 0;
+    }
 	
 	// enable ndp cache
 	if(initconfig->enablendpcache) {
