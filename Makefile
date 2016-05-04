@@ -1,4 +1,4 @@
-CFLAGS+=-O2 -g -DSECCOMP_ENABLE -DDEBUG -I ./include
+CFLAGS+=-O2 -g -DSECCOMP_ENABLE -I ./include
 LIBS+=-lcrypto -lz -lseccomp
 INC_DIR=./include
 DESTDIR="/usr/local"
