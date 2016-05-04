@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "logging.h"
 
 
 #if defined(__FreeBSD__)
@@ -40,10 +41,9 @@
 // Execute command.
 int ifconfigExec(const char *cmd) {
 	int ret = system(cmd);
-#ifdef IFCONFIG_DEBUG
-	printf("executed=\"%s\", result=\"%d\"\n", cmd, ret);
-#endif
-	return ret;
+	msgf("executed=\"%s\", result=\"%d\"", cmd, ret);
+
+    return ret;
 }
 
 
