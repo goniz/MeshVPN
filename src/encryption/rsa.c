@@ -118,10 +118,7 @@ int rsaImportKey(struct s_rsa * rsa, const char *keypath) {
         return 0;
     }
     
-    debugf("PKEY type is %d", EVP_PKEY_id(rsa->key));
-    PEM_write_PrivateKey(stdout,rsa->key,NULL,NULL,0,0,NULL);
-    
-    debugf("Private key successfully loaded from %s", keypath);
+    debugf("Private key successfully loaded from %s, ID: %d", keypath, EVP_PKEY_id(rsa->key));
     rsa->isvalid = 1;
     rsa->isprivate = 1;
     
