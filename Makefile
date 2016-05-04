@@ -1,4 +1,8 @@
 CFLAGS+=-O2 -g -DSECCOMP_ENABLE -I ./include
+ifeq ($(DEBUG),1)
+    CFLAGS += -DDEBUG
+endif
+
 LIBS+=-lcrypto -lz -lseccomp
 INC_DIR=./include
 DESTDIR="/usr/local"
@@ -41,6 +45,7 @@ peervpn: $(objects)
 	$(CC) $(LDFLAGS) $(objects) $(LIBS) -o $@
 
 rpm:
+	echo "Env $(VAR)"
 	echo "Building RPM for $(COMMIT)"
 	mkdir -p redhat/build/SPECS
 	mkdir -p redhat/build/SRPCS
