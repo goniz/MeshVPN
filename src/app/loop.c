@@ -20,7 +20,10 @@
 #include "io.h"
 #include "p2p.h"
 #include "map.h"
+#include "console.h"
 #include "platform.h"
+
+extern struct s_p2psec *g_p2psec;
 
 // Connect initpeers.
 void connectInitpeers(struct s_initpeers * peers) {

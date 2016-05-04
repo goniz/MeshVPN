@@ -22,13 +22,14 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <openssl/engine.h>
-#include "include/globals.h"
+#include "globals.h"
 
 #include "rsa.h"
 #include "app.h"
 #include "pwd.ic"
 #include "logging.h"
 
+struct s_p2psec * g_p2psec = NULL;
 
 // commandline parser
 int main(int argc, char **argv) {

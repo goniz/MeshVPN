@@ -49,7 +49,7 @@ struct s_initpeers {
 };
 // global variables
 struct s_io_state iostate;
-struct s_p2psec *g_p2psec = NULL;
+struct s_p2psec * g_p2psec;
 int g_mainloop;
 
 struct s_switch_state g_switchstate;

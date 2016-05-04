@@ -522,4 +522,36 @@ int mapDestroy(struct s_map *map) {
 }
 
 
+int mapStrNAdd(struct s_map *map, const char *str, const int len, const void *value) {
+    mapStrNPrepKey(map, str, len);
+    return mapAdd(map, key, value);
+}
+
+
+void *mapStrNGet(struct s_map *map, const char *str, const int len) {
+    mapStrNPrepKey(map, str, len);
+    return mapGet(map, key);
+}
+
+
+void *mapStrNGetN(struct s_map *map, const char *str, const int len) {
+    mapStrNPrepKey(map, str, len);
+    return mapGetN(map, key, x);
+}
+
+
+int mapStrNRemove(struct s_map *map, const char *str, const int len) {
+    mapStrNPrepKey(map, str, len);
+    return mapRemove(map, key);
+}
+
+
+int mapStrNSet(struct s_map *map, const char *str, const int len, const void *value) {
+    mapStrNPrepKey(map, str, len);
+    return mapSet(map, key, value);
+}
+
+
+
+
 #endif // F_MAP_C

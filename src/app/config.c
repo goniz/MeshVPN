@@ -20,6 +20,7 @@
 #define H_CONFIG
 
 #include "app.h"
+#include "globals.h"
 
 void throwError(char *msg) {
 	if(msg != NULL) printf("error: %s\n",msg);
