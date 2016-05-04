@@ -131,8 +131,37 @@ int mapMemInit(struct s_map *map, const int mem_size, const int map_size, const 
 // Allocate memory for the map.
 int mapCreate(struct s_map *map, const int map_size, const int key_size, const int value_size);
 
-
 // Free the memory used by the map.
 int mapDestroy(struct s_map *map);
+
+
+#define mapStrNPrepKey(map, str, len) \
+int key_size = map->key_size; \
+char key[key_size]; \
+int x; \
+if((key_size - 1) < len) { \
+x = (key_size - 1); \
+} \
+else { \
+x = len; \
+} \
+memset(key, 0, key_size); \
+memcpy(key, str, x);
+
+
+#define mapStrAdd(map, str, value) mapStrNAdd(map, str, strlen(str), value)
+int mapStrNAdd(struct s_map *map, const char *str, const int len, const void *value);
+
+#define mapStrGet(map, str) mapStrNGet(map, str, strlen(str))
+void *mapStrNGet(struct s_map *map, const char *str, const int len) ;
+
+#define mapStrGetN(map, str) mapStrNGetN(map, str, strlen(str))
+void *mapStrNGetN(struct s_map *map, const char *str, const int len);
+
+#define mapStrRemove(map, str) mapStrNRemove(map, str, strlen(str))
+int mapStrNRemove(struct s_map *map, const char *str, const int len);
+
+#define mapStrSet(map, str, value) mapStrNSet(map, str, strlen(str), value)
+int mapStrNSet(struct s_map *map, const char *str, const int len, const void *value);
 
 #endif // F_MAP_C

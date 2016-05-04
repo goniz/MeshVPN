@@ -15,6 +15,7 @@
  *   You should have received a copy of the GNU General Public License     *
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
+
 #include "logging.h"
 #include "globals.h"
 #include "nodeid.h"
@@ -30,6 +31,9 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
+
+extern struct s_p2psec * g_p2psec;
+
 
 // handle termination signals
 void sighandler(int sig) {

@@ -20,10 +20,14 @@
 #ifndef F_CONSOLE_C
 #define F_CONSOLE_C
 
+#include <string.h>
+#include <stdio.h>
+#include "map.h"
+#include "util.h"
+#include "p2p.h"
+#include "globals.h"
 
-#include "mapstr.c"
-#include "util.c"
-
+extern struct s_p2psec * g_p2psec;
 
 // Global definitions.
 #define consoleMAXARGS 10
@@ -64,7 +68,7 @@ struct s_console {
 #define consoleArgs7(arg0, arg1, arg2, arg3, arg4, arg5, arg6) consoleArgsN(7, arg0, arg1, arg2, arg3, arg4, arg5, arg6, NULL, NULL)
 #define consoleArgs8(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7) consoleArgsN(8, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, NULL)
 #define consoleArgs9(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) consoleArgsN(9, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
-static struct s_console_args consoleArgsN(int argc, void *arg0, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6, void *arg7, void *arg8) {
+struct s_console_args consoleArgsN(int argc, void *arg0, void *arg1, void *arg2, void *arg3, void *arg4, void *arg5, void *arg6, void *arg7, void *arg8) {
 	struct s_console_args ret = { .count = argc, .arg[0] = arg0, .arg[1] = arg1, .arg[2] = arg2, .arg[3] = arg3, .arg[4] = arg4, .arg[5] = arg5, .arg[6] = arg6, .arg[7] = arg7, .arg[8] = arg8 };
 	return ret;
 }
@@ -72,7 +76,7 @@ static struct s_console_args consoleArgsN(int argc, void *arg0, void *arg1, void
 
 // Register a new command. NULL arguments will be replaced by console input.
 #define consoleRegisterCommand(console, name, function, args) consoleRegisterCommandN(console, name, strlen(name), function, args)
-static int consoleRegisterCommandN(struct s_console *console, const char *name, const int namelen, void (*function)(struct s_console_args *), struct s_console_args args) {
+int consoleRegisterCommandN(struct s_console *console, const char *name, const int namelen, void (*function)(struct s_console_args *), struct s_console_args args) {
 	const struct s_console_command cmd = { .function = function, .fixed_args = args };
 	char filtered_name[namelen];
 	utilStringFilter(filtered_name, name, namelen);
@@ -82,7 +86,7 @@ static int consoleRegisterCommandN(struct s_console *console, const char *name, 
 
 // Remove a command.
 #define consoleUnregisterCommand(console, name) consoleUnregisterCommandN(console, name, strlen(name))
-static int consoleUnregisterCommandN(struct s_console *console, const char *name, const int namelen) {
+int consoleUnregisterCommandN(struct s_console *console, const char *name, const int namelen) {
 	char filtered_name[namelen];
 	utilStringFilter(filtered_name, name, namelen);
 	return mapStrNRemove(&console->commanddb, filtered_name, namelen);
@@ -91,7 +95,7 @@ static int consoleUnregisterCommandN(struct s_console *console, const char *name
 
 // Find the function that belongs to the command name.
 #define consoleGetCommand(console, name) consoleGetCommandN(console, name, strlen(name))
-static struct s_console_command *consoleGetCommandN(struct s_console *console, const char *name, const int namelen) {
+struct s_console_command *consoleGetCommandN(struct s_console *console, const char *name, const int namelen) {
 	char filtered_name[namelen];
 	utilStringFilter(filtered_name, name, namelen);
 	return mapStrNGet(&console->commanddb, filtered_name, namelen);
@@ -99,7 +103,7 @@ static struct s_console_command *consoleGetCommandN(struct s_console *console, c
 
 
 // Send data to the console output.
-static int consoleOut(struct s_console *console, const char *data, const int datalen) {
+int consoleOut(struct s_console *console, const char *data, const int datalen) {
 	int buffer_size = console->buffer_size;
 	int count = console->outbuf_count;
 	int spos = ((console->outbuf_start + console->outbuf_count) % buffer_size);
@@ -132,7 +136,7 @@ static int consoleOut(struct s_console *console, const char *data, const int dat
 
 
 // Send the prompt to the console output
-static int consolePrompt(struct s_console *console) {
+int consolePrompt(struct s_console *console) {
 	if(console->prompt_enabled) {
 		return consoleOut(console, console->prompt, console->prompt_length);
 	}
@@ -143,26 +147,26 @@ static int consolePrompt(struct s_console *console) {
 
 
 // Send a newline to the console output
-static int consoleNL(struct s_console *console) {
+int consoleNL(struct s_console *console) {
 	return consoleOut(console, "\r\n", 2);
 }
 
 
 // Get console prompt status.
-static int consoleGetPromptStatus(struct s_console *console) {
+int consoleGetPromptStatus(struct s_console *console) {
 	return console->prompt_enabled;
 }
 
 
 // Set console prompt status.
-static void consoleSetPromptStatus(struct s_console *console, const int status) {
+void consoleSetPromptStatus(struct s_console *console, const int status) {
 	console->prompt_enabled = status;
 }
 
 
 // Set up the console prompt.
 #define consoleSetPrompt(console, prompt) consoleSetPromptN(console, prompt, strlen(prompt))
-static int consoleSetPromptN(struct s_console *console, const char *prompt, const int prompt_length) {
+int consoleSetPromptN(struct s_console *console, const char *prompt, const int prompt_length) {
 	if(prompt != NULL && prompt_length > 0) {
 		if(prompt_length < 32) {
 			memcpy(console->prompt, prompt, prompt_length);
@@ -182,13 +186,13 @@ static int consoleSetPromptN(struct s_console *console, const char *prompt, cons
 
 // Send a message to the console output.
 #define consoleMsg(console, msg) consoleMsgN(console, msg, strlen(msg))
-static int consoleMsgN(struct s_console *console, const char *msg, const int msglen) {
+int consoleMsgN(struct s_console *console, const char *msg, const int msglen) {
 	return consoleOut(console, msg, msglen);
 }
 
 
 // Process an input line.
-static void consoleProcessLine(struct s_console *console) {
+void consoleProcessLine(struct s_console *console) {
 	int line_length = console->inbuf_count;
 	const struct s_console_command *cmd;
 	struct s_console_args exec_args = { .count = 0 };
@@ -262,7 +266,7 @@ static void consoleProcessLine(struct s_console *console) {
 
 
 // Write to the console.
-static int consoleWrite(struct s_console *console, const char *input, const int length) {
+int consoleWrite(struct s_console *console, const char *input, const int length) {
 	int i = 0;
 	int zero;
 	int escape;
@@ -326,7 +330,7 @@ static int consoleWrite(struct s_console *console, const char *input, const int 
 
 
 // Read console output.
-static int consoleRead(struct s_console *console, char *output, const int length) {
+int consoleRead(struct s_console *console, char *output, const int length) {
 	int buffer_size = console->buffer_size;
 	int len = console->outbuf_count;
 	int spos = console->outbuf_start;
@@ -354,7 +358,7 @@ static int consoleRead(struct s_console *console, char *output, const int length
 
 
 // Initialize the console.
-static void consoleInit(struct s_console *console) {
+void consoleInit(struct s_console *console) {
 	mapInit(&console->commanddb);
 	console->inbuf_count = 0;
 	console->outbuf_start = 0;
@@ -365,7 +369,7 @@ static void consoleInit(struct s_console *console) {
 
 
 // Create a console.
-static int consoleCreate(struct s_console *console, const int db_size, const int key_size, const int buffer_size) {
+int consoleCreate(struct s_console *console, const int db_size, const int key_size, const int buffer_size) {
 	// check parameters
 	if(!((db_size > 0) && (key_size > 0) && (buffer_size > 0))) return 0;
 	
@@ -385,7 +389,7 @@ static int consoleCreate(struct s_console *console, const int db_size, const int
 
 
 // Destroy a console.
-static int consoleDestroy(struct s_console *console) {
+int consoleDestroy(struct s_console *console) {
 	if(!((console != NULL) && (console->inbuf != NULL) && (console->outbuf != NULL))) return 0;
 	free(console->outbuf);
 	free(console->inbuf);
@@ -394,6 +398,120 @@ static int consoleDestroy(struct s_console *console) {
 	console->inbuf = NULL;
 	return 1;
 }
+
+// print table of active peers
+void printActivePeerTable() {
+    char str[32768];
+    p2psecStatus(g_p2psec, str, 32768);
+    printf("%s\n", str);
+}
+
+
+// print NodeDB
+void printNodeDB() {
+    char str[32768];
+    p2psecNodeDBStatus(g_p2psec, str, 32768);
+    printf("%s\n", str);
+}
+
+
+// print RelayDB
+void printRelayDB() {
+    char str[32768];
+    nodedbStatus(&g_p2psec->mgt.relaydb, str, 32768);
+    printf("%s\n", str);
+}
+
+
+// print table of mac addrs
+void printMacTable() {
+    char str[32768];
+    switchStatus(&g_switchstate, str, 32768);
+    printf("%s\n", str);
+}
+
+
+// print table of ndp cache
+void printNDPTable() {
+    char str[32768];
+    ndp6Status(&g_ndpstate, str, 32768);
+    printf("%s\n", str);
+}
+
+
+// parse command
+void decodeConsole(char *cmd, int cmdlen) {
+    char text[4096];
+    char pa[1024];
+    char pb[1024];
+    char pc[1024];
+    int i, j;
+    struct s_io_addrinfo new_peeraddrs;
+    struct s_peeraddr new_peeraddr;
+    
+    pa[0] = '\0';
+    pb[0] = '\0';
+    pc[0] = '\0';
+    sscanf(cmd,"%s %s %s",pa,pb,pc);
+    if(pa[0] == 'A' || pa[0] == 'a') {
+        // ACTIVEPEERTABLE
+        printActivePeerTable();
+    }
+    if(pa[0] == 'D' || pa[0] == 'd') {
+        // DB
+        printNodeDB();
+    }
+    if(pa[0] == 'F' || pa[0] == 'f') {
+        // FDB
+        printRelayDB();
+    }
+    if(pa[0] == 'I' || pa[0] == 'i') {
+        // INSERTPEER <address>
+        if(ioResolveName(&new_peeraddrs, pb, pc)) {
+            for(i=0; i<new_peeraddrs.count; i++) {
+                if(p2psecConnect(g_p2psec, new_peeraddrs.item[i].addr)) {
+                    utilByteArrayToHexstring(text, 4096, new_peeraddrs.item[i].addr, peeraddr_SIZE);
+                    printf("connecting to %s...\n", text);
+                }
+            }
+        }
+        else {
+            printf("could not get peer address.\n");
+        }
+    }
+    if(pa[0] == 'M' || pa[0] == 'm') {
+        // MACTABLE
+        printMacTable();
+    }
+    if(pa[0] == 'N' || pa[0] == 'n') {
+        // NDPTABLE
+        printNDPTable();
+    }
+    if(pa[0] == 'P' || pa[0] == 'p') {
+        // PEERTABLE
+        printActivePeerTable();
+    }
+    if(pa[0] == 'R' || pa[0] == 'r') {
+        // RELAYEDINSERTPEER <relayid> <relaypeerid>
+        sscanf(pb,"%d",&i);
+        sscanf(pc,"%d",&j);
+        if(peermgtIsActiveRemoteID(&g_p2psec->mgt, i)) {
+            peeraddrSetIndirect(&new_peeraddr, i, g_p2psec->mgt.data[i].conntime, j);
+            if(p2psecConnect(g_p2psec, new_peeraddr.addr)) {
+                utilByteArrayToHexstring(text, 4096, new_peeraddr.addr, peeraddr_SIZE);
+                printf("connecting to %s...\n", text);
+            }
+        }
+        else {
+            printf("could not get peer address.\n");
+        }
+    }
+    if(pa[0] == 'Q' || pa[0] == 'q') {
+        // QUIT
+        g_mainloop = 0;
+    }
+}
+
 
 
 #endif // F_CONSOLE_C

@@ -22,12 +22,14 @@ objects = src/encryption/rsa.o \
           src/platform/io.o \
           src/platform/seccomp.o \
           src/platform/perms.o \
+          src/platform/ifconfig.o \
           src/app/init.o \
           src/app/loop.o \
           src/app/config.o \
           src/app/util.o \
           src/app/map.o \
           src/app/logging.o \
+          src/app/console.o \
           src/ethernet/checksum.o \
           src/ethernet/ndp6.o \
           src/ethernet/switch.o \

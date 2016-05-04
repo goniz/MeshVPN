@@ -38,7 +38,7 @@
 
 
 // Execute command.
-static int ifconfigExec(const char *cmd) {
+int ifconfigExec(const char *cmd) {
 	int ret = system(cmd);
 #ifdef IFCONFIG_DEBUG
 	printf("executed=\"%s\", result=\"%d\"\n", cmd, ret);
@@ -48,7 +48,7 @@ static int ifconfigExec(const char *cmd) {
 
 
 // Check & copy input.
-static int ifconfigCheckCopyInput(char *out, const int out_len, const char *in, const int in_len) {
+int ifconfigCheckCopyInput(char *out, const int out_len, const char *in, const int in_len) {
 	int i;
 	char c;
 	if(!(in_len < out_len)) return 0;
@@ -74,7 +74,7 @@ static int ifconfigCheckCopyInput(char *out, const int out_len, const char *in, 
 
 
 // Split input.
-static int ifconfigSplit(char *a_out, const int a_len, char *b_out, const int b_len, const char *in, const int in_len, const char split_char) {
+int ifconfigSplit(char *a_out, const int a_len, char *b_out, const int b_len, const char *in, const int in_len, const char split_char) {
 	int i;
 	int s;
 	if((a_len + 1 + b_len) < in_len) return 0;
@@ -95,7 +95,7 @@ static int ifconfigSplit(char *a_out, const int a_len, char *b_out, const int b_
 
 
 // Calculate netmask from prefixlen.
-static void ifconfig4Netmask(char *out, const int prefixlen) {
+void ifconfig4Netmask(char *out, const int prefixlen) {
 	int mask[4];
 	int i, j, p;
 	for(j=0; j<4; j++) {
@@ -117,7 +117,7 @@ static void ifconfig4Netmask(char *out, const int prefixlen) {
 
 
 // Configure IPv4 address on specified interface.
-static int ifconfig4(const char *ifname, const int ifname_len, const char *addr, const int addr_len) {
+int ifconfig4(const char *ifname, const int ifname_len, const char *addr, const int addr_len) {
 	char cmd[1024]; memset(cmd, 0, 1024);
 	char ifname_s[256]; memset(ifname_s, 0, 256);
 	char ip_s[256]; memset(ip_s, 0, 256);
@@ -170,7 +170,7 @@ static int ifconfig4(const char *ifname, const int ifname_len, const char *addr,
 
 
 // Configure IPv6 address on specified interface.
-static int ifconfig6(const char *ifname, const int ifname_len, const char *addr, const int addr_len) {
+int ifconfig6(const char *ifname, const int ifname_len, const char *addr, const int addr_len) {
 	char cmd[1024]; memset(cmd, 0, 1024);
 	char ifname_s[256]; memset(ifname_s, 0, 256);
 	char ip_s[256]; memset(ip_s, 0, 256);
