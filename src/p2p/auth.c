@@ -377,7 +377,7 @@ void authGenS3(struct s_auth_state *authstate) {
     
 	if(!authstate->local_cneg_set) {
         authstate->nextmsg_size = 0;
-        debug("S3 generation failed");
+        debug("S3 generation failed, wrong negotiation set");
         return;
     }
     
@@ -586,7 +586,7 @@ int authDecodeMsg(struct s_auth_state *authstate, const unsigned char *msg, cons
     
     debugf("AUTH state request %d, newstate %d, nextmsg_size: %d", state, newstate, authstate->nextmsg_size);
 
-    if(state == newstate) {
+    if(state == newstate && state != AUTH_STATE_FINISH_ACK) {
         debugf("Failed to change state %d => %d", state, state + 1);
         return 0;
     }

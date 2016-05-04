@@ -289,6 +289,7 @@ int authmgtDecodeMsg(struct s_authmgt *mgt, const unsigned char *msg, const int 
         
         return 1;
     } else if(authid == 0) {
+        debugf("starting new session for %s, authid: %d", humanIp, authid);
         // message requests new auth session
         dupid = authmgtFindAddr(mgt, peeraddr);
         
@@ -309,6 +310,7 @@ int authmgtDecodeMsg(struct s_authmgt *mgt, const unsigned char *msg, const int 
             if(!(dupid < 0)) {
                 authmgtDelete(mgt, dupid);
                 authstateid = authmgtNew(mgt, peeraddr);
+                debugf("new auth session started for %s, authstateid %d", humanIp, authstateid);
             }
         }
         

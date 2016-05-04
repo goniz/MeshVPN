@@ -7,11 +7,7 @@
 #define LOGGGIN_FILE 1
 #define LOGGING_SYSLOG 2
 
-extern int logging_mode;
-
-int logger_init_syslog();
-
-int logger_set_mode(int);
+int loggerSetMode(int);
 
 void msg(char *);
 

@@ -3,22 +3,23 @@
 #include <syslog.h>
 #include <stdarg.h>
 #include <string.h>
+#include <time.h>
 
 int logging_mode = LOGGING_NONE;
 
 /**
  * Initialize logger. Create connection to syslog and specify application name
  */
-int logger_init_syslog() {
+static int loggerInitSyslog() {
  	openlog("peervpn", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
 	syslog(LOG_INFO, "PeerVPN daemon started");    
 
 	return 1;
 }
 
-int logger_set_mode(int mode) {
+int loggerSetMode(int mode) {
 	if(mode == LOGGING_SYSLOG) {
-		logger_init_syslog();
+		loggerInitSyslog();
 	}
 
 	logging_mode = mode;
@@ -26,8 +27,10 @@ int logger_set_mode(int mode) {
 }
 
 void msg(char * msg) {
+    
 	if(logging_mode == LOGGING_NONE) {
-		printf("%s\n", msg);
+        time_t t = time(NULL);
+      	printf("[%d] %s\n", t, msg);
 	} else if(logging_mode == LOGGING_SYSLOG) {
 		syslog(LOG_INFO, "%s", msg);
 	}
