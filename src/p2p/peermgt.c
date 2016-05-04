@@ -835,95 +835,119 @@ int peermgtDecodePacketRecursive(struct s_peermgt *mgt, const unsigned char *pac
 	struct s_packet_data data = { .pl_buf_size = peermgt_MSGSIZE_MAX, .pl_buf = mgt->msgbuf };
 	struct s_peeraddr indirect_addr;
 	struct s_nodeid peer_nodeid;
+    
+    CREATE_HUMAN_IP(source_addr);
+    
 	ret = 0;
-	if(packet_len > (packet_PEERID_SIZE + packet_HMAC_SIZE) && (depth < peermgt_DECODE_RECURSION_MAX_DEPTH)) {
-		peerid = packetGetPeerID(packet);
-		if(peermgtIsActiveID(mgt, peerid)) {
-			if(peerid > 0) {
-				// packet has an active PeerID
-				mgt->msgsize = 0;
-				if(packetDecode(&data, packet, packet_len, &mgt->ctx[peerid], &mgt->data[peerid].seq) > 0) {
-					if((data.pl_length > 0) && (data.pl_length < peermgt_MSGSIZE_MAX)) {
-						switch(data.pl_type) {
-							case packet_PLTYPE_USERDATA:
-								if(peermgtGetFlag(mgt, peermgt_FLAG_USERDATA)) {
-									ret = 1;
-									mgt->msgsize = data.pl_length;
-									mgt->msgpeerid = data.peerid;
-								}
-								else {
-									ret = 0;
-								}
-								break;
-							case packet_PLTYPE_USERDATA_FRAGMENT:
-								if(peermgtGetFlag(mgt, peermgt_FLAG_USERDATA)) {
-									ret = peermgtDecodeUserdataFragment(mgt, &data);
-									if(ret > 0) {
-										mgt->msgsize = data.pl_length;
-										mgt->msgpeerid = data.peerid;
-									}
-								}
-								else {
-									ret = 0;
-								}
-								break;
-							case packet_PLTYPE_PEERINFO:
-								ret = peermgtDecodePacketPeerinfo(mgt, &data);
-								break;
-							case packet_PLTYPE_PING:
-								ret = peermgtDecodePacketPing(mgt, &data);
-								break;
-							case packet_PLTYPE_PONG:
-								ret = peermgtDecodePacketPong(mgt, &data);
-								break;
-							case packet_PLTYPE_RELAY_IN:
-								if(peermgtGetFlag(mgt, peermgt_FLAG_RELAY)) {
-									ret = peermgtDecodePacketRelayIn(mgt, &data);
-								}
-								else {
-									ret = 0;
-								}
-								break;
-							case packet_PLTYPE_RELAY_OUT:
-								if(data.pl_length > packet_PEERID_SIZE) {
-									memcpy(mgt->relaymsgbuf, &data.pl_buf[4], (data.pl_length - packet_PEERID_SIZE)); 
-									peeraddrSetIndirect(&indirect_addr, peerid, mgt->data[peerid].conntime, utilReadInt32(&data.pl_buf[0])); // generate indirect PeerAddr
-									ret = peermgtDecodePacketRecursive(mgt, mgt->relaymsgbuf, (data.pl_length - packet_PEERID_SIZE), &indirect_addr, tnow, (depth + 1)); // decode decapsulated packet
-								}
-								break;
-							default:
-								ret = 0;
-								break;
-						}
-						if(ret > 0) {
-							if(mgt->data[peerid].lastrecv != tnow) { // Update NodeDB (maximum once per second).
-								if(!peeraddrIsInternal(&mgt->data[peerid].remoteaddr)) { // do not pollute NodeDB with internal addresses
-									if(peermgtGetNodeID(mgt, &peer_nodeid, peerid)) {
-										nodedbUpdate(&mgt->nodedb, &peer_nodeid, &mgt->data[peerid].remoteaddr, 1, 1, 0);
-									}
-								}
-							}
-							mgt->data[peerid].lastrecv = tnow;
-							mgt->data[peerid].remoteaddr = *source_addr;
-							return 1;
-						}
-					}
-				}
-			}
-			else if(peerid == 0) {
-				// packet has an anonymous PeerID
-				if(packetDecode(&data, packet, packet_len, &mgt->ctx[0], NULL)) {
-					switch(data.pl_type) {
-						case packet_PLTYPE_AUTH:
-							return peermgtDecodePacketAuth(mgt, &data, source_addr);
-						default:
-							return 0;
-					}
-				}
-			}
-		}
-	}
-	return 0;
+    
+	if(packet_len <= (packet_PEERID_SIZE + packet_HMAC_SIZE) || (depth >= peermgt_DECODE_RECURSION_MAX_DEPTH)) {
+        debugf("Wrong packets size (%d) or recursion depth (%d) from %s", packet_len, depth, humanIp);
+        return 0;
+    }
+    
+    peerid = packetGetPeerID(packet);
+    
+    // proceed inactive peers
+    if(!peermgtIsActiveID(mgt, peerid)) {
+        debugf("failed to proceed packet for inactive peerid: %d, IP: %s", peerid, humanIp);
+        return 0;
+    }
+    
+    if(peerid == 0) {
+        // packet has an anonymous PeerID
+        if(!packetDecode(&data, packet, packet_len, &mgt->ctx[0], NULL)) {
+            debugf("failed to decode packet from anonymous peer, IP: %s", humanIp);
+            return 0;
+        }
+        
+        switch(data.pl_type) {
+            case packet_PLTYPE_AUTH:
+                return peermgtDecodePacketAuth(mgt, &data, source_addr);
+            default:
+                return 0;
+        }
+    }
+
+    if(peerid <= 0) {
+        debugf("denied packet from invalid PeerID: %d", peerid);
+        return 0;
+    }
+    
+    // packet has an active PeerID
+    mgt->msgsize = 0;
+    if(!packetDecode(&data, packet, packet_len, &mgt->ctx[peerid], &mgt->data[peerid].seq) > 0) {
+        debugf("failed to decode packet from PeerID: %d, size: %d, IP: %s", peerid, packet_len, humanIp);
+        return 0;
+    }
+    
+    if(!((data.pl_length > 0) && (data.pl_length < peermgt_MSGSIZE_MAX))) {
+        debugf("bad packet from PeerID: %d", peerid);
+        return 0;
+    }
+    
+    switch(data.pl_type) {
+        case PACKET_PLTYPE_USERDATA:
+            if(!peermgtGetFlag(mgt, peermgt_FLAG_USERDATA)) {
+                return 0;
+            }
+            ret = 1;
+            mgt->msgsize = data.pl_length;
+            mgt->msgpeerid = data.peerid;
+            break;
+        case PACKET_PLTYPE_USERDATA_FRAGMENT:
+            if(!peermgtGetFlag(mgt, peermgt_FLAG_USERDATA)) {
+                return 0;
+            }
+            ret = peermgtDecodeUserdataFragment(mgt, &data);
+            if(ret > 0) {
+                mgt->msgsize = data.pl_length;
+                mgt->msgpeerid = data.peerid;
+            }
+            
+            break;
+        case PACKET_PLTYPE_PEERINFO:
+            ret = peermgtDecodePacketPeerinfo(mgt, &data);
+            break;
+        case PACKET_PLTYPE_PING:
+            debugf("ping packet from %s", humanIp);
+            ret = peermgtDecodePacketPing(mgt, &data);
+            break;
+        case PACKET_PLTYPE_PONG:
+            debugf("pong packet from %s", humanIp);
+            ret = peermgtDecodePacketPong(mgt, &data);
+            break;
+        case PACKET_PLTYPE_RELAY_IN:
+            if(!peermgtGetFlag(mgt, peermgt_FLAG_RELAY)) {
+                return 0;
+            }
+            ret = peermgtDecodePacketRelayIn(mgt, &data);
+            break;
+        case PACKET_PLTYPE_RELAY_OUT:
+            if(data.pl_length > packet_PEERID_SIZE) {
+                memcpy(mgt->relaymsgbuf, &data.pl_buf[4], (data.pl_length - packet_PEERID_SIZE));
+                peeraddrSetIndirect(&indirect_addr, peerid, mgt->data[peerid].conntime, utilReadInt32(&data.pl_buf[0])); // generate indirect PeerAddr
+                ret = peermgtDecodePacketRecursive(mgt, mgt->relaymsgbuf, (data.pl_length - packet_PEERID_SIZE), &indirect_addr, tnow, (depth + 1)); // decode decapsulated packet
+            }
+            break;
+        default:
+            return 0;
+            break;
+    }
+    
+    if(ret <= 0) {
+        return 0;
+    }
+    
+    if(mgt->data[peerid].lastrecv != tnow) { // Update NodeDB (maximum once per second).
+        if(!peeraddrIsInternal(&mgt->data[peerid].remoteaddr)) { // do not pollute NodeDB with internal addresses
+            if(peermgtGetNodeID(mgt, &peer_nodeid, peerid)) {
+                nodedbUpdate(&mgt->nodedb, &peer_nodeid, &mgt->data[peerid].remoteaddr, 1, 1, 0);
+            }
+        }
+    }
+    mgt->data[peerid].lastrecv = tnow;
+    mgt->data[peerid].remoteaddr = *source_addr;
+    return 1;
 }
 
 

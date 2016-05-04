@@ -331,7 +331,7 @@ void nodedbStatus(struct s_nodedb *db, char *report, const int report_len);
 #define packet_CRHDR_PLOPT_START (packet_CRHDR_PLTYPE_START + packet_PLTYPE_SIZE)
 
 
-// payload types
+// @deprecated
 #define packet_PLTYPE_USERDATA 0
 #define packet_PLTYPE_USERDATA_FRAGMENT 1
 #define packet_PLTYPE_AUTH 2
@@ -341,6 +341,16 @@ void nodedbStatus(struct s_nodedb *db, char *report, const int report_len);
 #define packet_PLTYPE_RELAY_IN 6
 #define packet_PLTYPE_RELAY_OUT 7
 
+
+// payload types
+#define PACKET_PLTYPE_USERDATA 0
+#define PACKET_PLTYPE_USERDATA_FRAGMENT 1
+#define PACKET_PLTYPE_AUTH 2
+#define PACKET_PLTYPE_PEERINFO 3
+#define PACKET_PLTYPE_PING 4
+#define PACKET_PLTYPE_PONG 5
+#define PACKET_PLTYPE_RELAY_IN 6
+#define PACKET_PLTYPE_RELAY_OUT 7
 
 // constraints
 #if packet_PEERID_SIZE != 4

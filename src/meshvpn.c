@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
 		return show_usage();
 	}
 	if(config.enablesyslog)	{
-		logger_set_mode(LOGGING_SYSLOG);
+		loggerSetMode(LOGGING_SYSLOG);
 	}
 	if(config.daemonize) {
 		msg("Detaching process");
