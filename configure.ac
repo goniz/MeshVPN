@@ -5,6 +5,26 @@ AC_PREREQ([2.69])
 
 AC_INIT([meshvpn], [0.1.44], [b.kuebler@kuebler-it.de])
 
+# Platform specific settings
+AC_CANONICAL_HOST
+case $host_os in
+  darwin* )
+        # Do something specific for mac
+        LDFLAGS="-L/usr/local/opt/openssl/lib $LDFLAGS"
+        CPPFLAGS="-I/usr/local/opt/openssl/include $CPPFLAGS"
+        ;;
+  linux*)
+        # Do something specific for linux
+        ;;
+   *BSD*)
+        # Do something specific for BSD
+        ;;
+    *)
+        #Default Case
+        AC_MSG_ERROR([Your platform is not currently supported])
+        ;;
+esac
+
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL

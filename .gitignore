@@ -3,6 +3,9 @@
 ### Autotools ###
 # http://www.gnu.org/software/automake
 
+/src/.deps
+/Makefile
+/src/Makefile
 Makefile.in
 /ar-lib
 /mdate-sh
@@ -18,8 +21,11 @@ Makefile.in
 /aclocal.m4
 /compile
 /config.guess
+/config.h
 /config.h.in
 /config.sub
+/config.log
+/config.status
 /configure
 /configure.scan
 /depcomp
@@ -107,5 +113,6 @@ dkms.conf
 *.lai
 
 # Executables
+/src/meshvpn
 
 # End of https://www.gitignore.io/api/c,c++,autotools
