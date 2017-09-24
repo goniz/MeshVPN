@@ -18,8 +18,9 @@
 
 
 // version information
-#define PEERVPN_VERSION_MAJOR 0
-#define PEERVPN_VERSION_MINOR 44
+#define MESHVPN_VERSION_MAJOR 0
+#define MESHVPN_VERSION_MINOR 1
+#define MESHVPN_VERSION_BUILD 44
 
 
 // compile time options & timing parameters

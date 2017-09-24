@@ -29,12 +29,12 @@
 #include "platform/io.c"
 #include "platform/ifconfig.c"
 #include "platform/seccomp.c"
-#include "globals.ic"
-#include "console.ic"
-#include "mainloop.ic"
-#include "config.ic"
-#include "pwd.ic"
-#include "init.ic"
+#include "globals.c"
+#include "console.c"
+#include "mainloop.c"
+#include "configparser.c"
+#include "pwd.c"
+#include "init.c"
 
 
 // commandline parser
@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
 	strcpy(config.userstr,"");
 	strcpy(config.groupstr,"");
 	strcpy(config.chrootstr,"");
-	strcpy(config.networkname,"PEERVPN");
+	strcpy(config.networkname,"MESHVPN");
 	strcpy(config.initpeers,"");
 	strcpy(config.engines,"");
 	config.password_len = 0;
@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
 	config.sockmark = 0;
 
 	setbuf(stdout,NULL);
-	printf("PeerVPN v%d.%03d\n", PEERVPN_VERSION_MAJOR, PEERVPN_VERSION_MINOR);
+	printf("MeshVPN v%d.%d.%03d\n", MESHVPN_VERSION_MAJOR, MESHVPN_VERSION_MINOR, MESHVPN_VERSION_BUILD);
 	printf("(c)2016 Tobias Volk <mail@tobiasvolk.de>\n");
 	printf("\n");
 
