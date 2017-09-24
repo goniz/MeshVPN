@@ -1,0 +1,5 @@
+*.o
+*.swo
+/peervpn
+/redhat/build/*
+*.swp

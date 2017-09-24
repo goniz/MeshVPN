@@ -1,12 +1,64 @@
-CFLAGS+=-O2
-LIBS+=-lcrypto -lz
+CFLAGS+=-O2 -g -DSECCOMP_ENABLE -I ./include
+ifeq ($(DEBUG),1)
+    CFLAGS += -DDEBUG
+endif
+
+LIBS+=-lcrypto -lz -lseccomp
+INC_DIR=./include
+DESTDIR="/usr/local"
+COMMIT=$(shell git log --format='%H' | head -n 1)
+
+objects = src/encryption/rsa.o \
+          src/encryption/crypto.o \
+          src/encryption/dh.o \
+          src/p2p/idsp.o \
+          src/p2p/auth.o \
+          src/p2p/nodeid.o \
+          src/p2p/nodedb.o \
+          src/p2p/peeraddr.o \
+          src/p2p/peermgt.o \
+          src/p2p/authmgt.o \
+          src/p2p/packet.o \
+          src/p2p/dfrag.o \
+          src/p2p/p2psec.o \
+          src/p2p/netid.o \
+          src/p2p/seq.o \
+          src/platform/io.o \
+          src/platform/seccomp.o \
+          src/platform/perms.o \
+          src/platform/ifconfig.o \
+          src/app/init.o \
+          src/app/loop.o \
+          src/app/config.o \
+          src/app/util.o \
+          src/app/map.o \
+          src/app/logging.o \
+          src/app/console.o \
+          src/ethernet/checksum.o \
+          src/ethernet/ndp6.o \
+          src/ethernet/switch.o \
+          src/ethernet/virtserv.o \
+          peervpn.o \
 
 all: peervpn
-peervpn: peervpn.o
-	$(CC) $(LDFLAGS) peervpn.o $(LIBS) -o $@
-peervpn.o: peervpn.c
+peervpn: $(objects)
+	$(CC) $(LDFLAGS) $(objects) $(LIBS) -o $@
+
+rpm:
+	echo "Env $(VAR)"
+	echo "Building RPM for $(COMMIT)"
+	mkdir -p redhat/build/SPECS
+	mkdir -p redhat/build/SRPCS
+	mkdir -p redhat/build/SOURCES
+	mkdir -p redhat/build/BUILD
+	mkdir -p redhat/build/BUILDROOT
+	cp redhat/peervpn.spec redhat/build/SPECS
+	sed -i 's/CURRENT_COMMIT/$(COMMIT)/g' redhat/build/SPECS/peervpn.spec
+	cd redhat/build/SOURCES && spectool -g ../SPECS/peervpn.spec && cd .. && rpmbuild --define "_topdir `pwd`" -ba SPECS/peervpn.spec
 
 install:
-	install peervpn /usr/local/sbin/peervpn
+	mkdir -p $(DESTDIR)/sbin
+	install peervpn $(DESTDIR)/sbin/peervpn
+
 clean:
-	rm -f peervpn peervpn.o
+	rm -f peervpn $(objects)
