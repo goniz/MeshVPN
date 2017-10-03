@@ -38,9 +38,7 @@ int main(int argc, char **argv) {
 	int i;
 	struct s_initconfig config;
 
-	// default configuration
-
-    setbuf(stdout,NULL);
+        setbuf(stdout,NULL);
 
 	confok = 0;
 	if(argc != 2) {

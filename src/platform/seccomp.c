@@ -21,7 +21,7 @@
 #define F_SECCOMP_C
 
 
-#ifdef SECCOMP_ENABLE
+#ifdef HAVE_LIBSECCOMP
 
 #include <seccomp.h>
 #include "platform.h"
@@ -93,4 +93,4 @@ int seccompEnable() {
 #endif
 
 
-#endif // F_SECCOMP_C 
+#endif // F_SECCOMP_C
