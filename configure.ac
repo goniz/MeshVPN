@@ -25,6 +25,9 @@ case $host_os in
         ;;
 esac
 
+# add include dir for header files
+CPPFLAGS="$CPPFLAGS -I../include"
+
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
@@ -33,10 +36,11 @@ AC_PROG_INSTALL
 AC_CHECK_LIB([z], [compress])
 AC_CHECK_LIB([ssl], [SSL_library_init])
 AC_CHECK_LIB([crypto], [ENGINE_init])
+AC_CHECK_LIB([seccomp], [seccomp_init])
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h stdio.h unistd.h stdint.h string.h time.h signal.h])
-AC_CHECK_HEADERS([fcntl.h seccomp.h netdb.h net/if.h netinet/in.h])
+AC_CHECK_HEADERS([syslog.h fcntl.h seccomp.h netdb.h net/if.h netinet/in.h])
 AC_CHECK_HEADERS([sys/types.h sys/stat.h sys/ioctl.h sys/select.h sys/socket.h])
 AC_CHECK_HEADERS([grp.h pwd.h])
 
@@ -56,7 +60,7 @@ AC_CHECK_FUNCS([memset select socket])
 AC_CONFIG_SRCDIR([src/meshvpn.c])
 
 # Also initialize automake
-AM_INIT_AUTOMAKE([-Wall -Werror])
+AM_INIT_AUTOMAKE([-Wall -Werror subdir-objects])
 
 AC_CONFIG_HEADERS([config.h])
 
