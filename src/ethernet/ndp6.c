@@ -1,21 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2014 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_NDP6_C
 #define F_NDP6_C
@@ -70,7 +72,7 @@ int ndp6GenAdvFrame(unsigned char *outbuf, const int outbuf_len, const unsigned 
 		memcpy(&outbuf[62], src_addr, ndp6_ADDR_SIZE); // target IPv6 address
 		memcpy(&outbuf[78], "\x02\x01", 2); // ICMPv6 option header
 		memcpy(&outbuf[80], src_mac, ndp6_MAC_SIZE); // target MAC address
-		
+
 		// calculate checksum
 		checksumZero(&checksum); // reset checksum
 		for(i=0; i<32; i=i+2) checksumAdd(&checksum, *((uint16_t *)(&outbuf[22+i]))); // IPv6 pseudoheader src+dest address
@@ -141,9 +143,9 @@ void ndp6Status(struct s_ndp6_state *ndpstate, char *report, const int report_le
 	unsigned char infoents[4];
 	int i;
 	int j;
-	
+
 	if(maxpos > report_len) { maxpos = report_len; }
-	
+
 	memcpy(&report[pos], "IPv6                                     MAC                PortID    PortTS    LastPkt ", 88);
 	pos = pos + 88;
 	report[pos++] = '\n';

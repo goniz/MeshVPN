@@ -1,21 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2012 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_DFRAG_C
 #define F_DFRAG_C
@@ -80,14 +82,14 @@ int dfragAllocateID(struct s_dfrag *dfrag, const int fragment_count) {
 		dfrag->length[id] = 0;
 		dfrag->msglength[id] = 0;
 		dfrag->pos = id + fragment_count;
-		
+
 		// overwrite previous message(s)
 		for(i=1; i<fragment_count; i++) {
 			dfrag->used[(id + i)] = 0;
 			dfrag->length[(id + i)] = 0;
 			dfrag->msglength[(id + i)] = 0;
 		}
-		
+
 		return id;
 	}
 	else {
@@ -135,7 +137,7 @@ int dfragCalcLength(struct s_dfrag *dfrag, const int id) {
 		if(dfrag->length[id + i] != dfrag->fragbuf_size) { return 0; }
 		len = len + dfrag->fragbuf_size;
 	}
-	
+
 	// save message length
 	dfrag->msglength[id] = len;
 	return len;
@@ -151,7 +153,7 @@ int dfragAssemble(struct s_dfrag *dfrag, const int peerct, const int peerid, con
 
 	// find message ID
 	id = dfragGetID(dfrag, peerct, peerid, seq);
-	
+
 	if(id < 0) {
 		// allocate an ID if nothing is found
 		id = dfragAllocateID(dfrag, fragment_count);
@@ -169,7 +171,7 @@ int dfragAssemble(struct s_dfrag *dfrag, const int peerct, const int peerid, con
 	// copy fragment to buffer
 	dfrag->length[(id + fragment_pos)] = fragment_len;
 	memcpy(&dfrag->fragbuf[((id + fragment_pos) * dfrag->fragbuf_size)], fragment, fragment_len);
-	
+
 	// check if message is complete
 	dfragCalcLength(dfrag, id);
 	if(dfragLength(dfrag, id) > 0) {

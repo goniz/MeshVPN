@@ -1,21 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2014 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef H_CONSOLE
 #define H_CONSOLE
@@ -31,25 +33,25 @@
 
 // The console structures.
 struct s_console_args {
-    void *arg[consoleMAXARGS];
-    int len[consoleMAXARGS];
-    int count;
+        void *arg[consoleMAXARGS];
+        int len[consoleMAXARGS];
+        int count;
 };
 struct s_console_command {
-    void (*function)(struct s_console_args *);
-    struct s_console_args fixed_args;
+        void (*function)(struct s_console_args *);
+        struct s_console_args fixed_args;
 };
 struct s_console {
-    struct s_map commanddb;
-    char *inbuf;
-    char *outbuf;
-    char prompt[32];
-    int prompt_length;
-    int prompt_enabled;
-    int buffer_size;
-    int inbuf_count;
-    int outbuf_start;
-    int outbuf_count;
+        struct s_map commanddb;
+        char *inbuf;
+        char *outbuf;
+        char prompt[32];
+        int prompt_length;
+        int prompt_enabled;
+        int buffer_size;
+        int inbuf_count;
+        int outbuf_start;
+        int outbuf_count;
 };
 
 
@@ -115,7 +117,7 @@ int consoleRead(struct s_console *console, char *output, const int length);
 void consoleInit(struct s_console *console);
 
 // Create a console.
-int consoleCreate(struct s_console *console, const int db_size, const int key_size, const int buffer_size) ;
+int consoleCreate(struct s_console *console, const int db_size, const int key_size, const int buffer_size);
 
 // Destroy a console.
 int consoleDestroy(struct s_console *console);

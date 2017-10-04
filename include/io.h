@@ -1,20 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2016 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef H_IO
 #define H_IO
@@ -86,50 +89,50 @@
 
 // The IO addr structure.
 struct s_io_addr {
-    unsigned char addr[24];
+        unsigned char addr[24];
 };
 
 
 // The IO addrinfo structure.
 struct s_io_addrinfo {
-    struct s_io_addr item[16];
-    int count;
+        struct s_io_addr item[16];
+        int count;
 };
 
 
 // The IO handle structure.
 struct s_io_handle {
-    int enabled;
-    int fd;
-    struct sockaddr_storage source_sockaddr;
-    struct s_io_addr source_addr;
-    int group_id;
-    int content_len;
-    int type;
-    int open;
+        int enabled;
+        int fd;
+        struct sockaddr_storage source_sockaddr;
+        struct s_io_addr source_addr;
+        int group_id;
+        int content_len;
+        int type;
+        int open;
 #if defined(IO_WINDOWS)
-    HANDLE fd_h;
-    int open_h;
-    OVERLAPPED ovlr;
-    int ovlr_used;
-    OVERLAPPED ovlw;
-    int ovlw_used;
+        HANDLE fd_h;
+        int open_h;
+        OVERLAPPED ovlr;
+        int ovlr_used;
+        OVERLAPPED ovlw;
+        int ovlw_used;
 #endif
 };
 
 
 // The IO state structure.
 struct s_io_state {
-    unsigned char *mem;
-    struct s_io_handle *handle;
-    int bufsize;
-    int max;
-    int count;
-    int timeout;
-    int sockmark;
-    int nat64clat;
-    unsigned char nat64_prefix[12];
-    int debug;
+        unsigned char *mem;
+        struct s_io_handle *handle;
+        int bufsize;
+        int max;
+        int count;
+        int timeout;
+        int sockmark;
+        int nat64clat;
+        unsigned char nat64_prefix[12];
+        int debug;
 };
 
 

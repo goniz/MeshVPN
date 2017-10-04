@@ -1,21 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2016 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_CRYPTO_C
 #define F_CRYPTO_C
@@ -57,7 +59,7 @@ int cryptoRandInit() {
 	int fd;
 	unsigned char randbuf[64];
 	if(!(cryptoRandFD < 0)) { return 1; }
-	if(!((fd = open("/dev/urandom", O_RDONLY)) < 0)) { 
+	if(!((fd = open("/dev/urandom", O_RDONLY)) < 0)) {
 		if(read(fd, randbuf, 64) > 0) {
 			RAND_seed(randbuf, 64);
 			cryptoRandFD = fd;
@@ -65,7 +67,7 @@ int cryptoRandInit() {
 		}
 		close(fd);
 	}
-	if(!((fd = open("/dev/random", O_RDONLY)) < 0)) { 
+	if(!((fd = open("/dev/random", O_RDONLY)) < 0)) {
 		if(read(fd, randbuf, 64) > 0) {
 			RAND_seed(randbuf, 64);
 			cryptoRandFD = fd;
@@ -142,12 +144,12 @@ int cryptoSetKeys(struct s_crypto *ctxs, const int count, const unsigned char *s
 
 	// setup hmac as the pseudorandom function
 	HMAC_CTX_init(&hmac_ctx);
-	
+
 	// calculate seed key
 	HMAC_Init_ex(&hmac_ctx, nonce_buf, nonce_len, keygen_md, NULL);
 	HMAC_Update(&hmac_ctx, secret_buf, secret_len);
 	HMAC_Final(&hmac_ctx, seed_key, (unsigned int *)&seed_key_len);
-	
+
 	// calculate derived keys
 	HMAC_Init_ex(&hmac_ctx, seed_key, seed_key_len, keygen_md, NULL);
 	HMAC_Update(&hmac_ctx, nonce_buf, nonce_len);
@@ -185,7 +187,7 @@ int cryptoSetKeys(struct s_crypto *ctxs, const int count, const unsigned char *s
 		j++;
 		i++;
 	}
-	
+
 	// clean up
 	HMAC_CTX_cleanup(&hmac_ctx);
 	return 1;
@@ -249,7 +251,7 @@ int cryptoHMAC(struct s_crypto *ctx, unsigned char *hmac_buf, const int hmac_len
 int cryptoSetSessionKeys(struct s_crypto *session_ctx, struct s_crypto *cipher_keygen_ctx, struct s_crypto *md_keygen_ctx, const unsigned char *nonce, const int nonce_len, const int cipher_algorithm, const int hmac_algorithm) {
 	struct s_crypto_cipher st_cipher;
 	struct s_crypto_md st_md;
-	
+
 	// select algorithms
 	switch(cipher_algorithm) {
 		case crypto_AES256: st_cipher = cryptoGetEVPCipher(EVP_aes_256_cbc()); break;
@@ -259,7 +261,7 @@ int cryptoSetSessionKeys(struct s_crypto *session_ctx, struct s_crypto *cipher_k
 		case crypto_SHA256: st_md = cryptoGetEVPMD(EVP_sha256()); break;
 		default: return 0;
 	}
-	
+
 	// calculate the keys
 	const int key_size = cryptoGetEVPCipherSize(&st_cipher);
 	unsigned char cipher_key[key_size];
@@ -328,7 +330,7 @@ int cryptoDec(struct s_crypto *ctx, unsigned char *dec_buf, const int dec_len, c
 	cr_len = len;
 	if(!EVP_DecryptFinal(&ctx->dec_ctx, &dec_buf[cr_len], &len)) { return 0; }
 	cr_len += len;
-	
+
 	return cr_len;
 }
 

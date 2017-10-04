@@ -1,21 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2014 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_AUTHMGT_C
 #define F_AUTHMGT_C
@@ -35,7 +37,7 @@ int authmgtSlotCount(struct s_authmgt *mgt) {
 
 // Return number of used auth slots.
 int authmgtUsedSlotCount(struct s_authmgt *mgt) {
-	return idspUsedCount(&mgt->idsp);	
+	return idspUsedCount(&mgt->idsp);
 }
 
 
@@ -43,7 +45,7 @@ int authmgtUsedSlotCount(struct s_authmgt *mgt) {
 int authmgtNew(struct s_authmgt *mgt, const struct s_peeraddr *peeraddr) {
 	int authstateid = idspNew(&mgt->idsp);
 	int tnow = utilGetClock();
-	
+
 	if(authstateid < 0) {
 		return -1;
 	}
@@ -51,10 +53,10 @@ int authmgtNew(struct s_authmgt *mgt, const struct s_peeraddr *peeraddr) {
 	mgt->lastsend[authstateid] = (mgt->fastauth) ? (tnow - authmgt_RESEND_TIMEOUT - 3) : tnow;
 	mgt->lastrecv[authstateid] = tnow;
 	mgt->peeraddr[authstateid] = *peeraddr;
-    
+
     CREATE_HUMAN_IP(peeraddr);
     debugf("Starting new auth session for %s, ID: %d", humanIp, authstateid);
-	
+
     return authstateid;
 }
 
@@ -74,7 +76,7 @@ int authmgtStart(struct s_authmgt *mgt, const struct s_peeraddr *peeraddr) {
 	if(authstateid < 0) {
 		return 0;
 	}
-	
+
 	authStart(&mgt->authstate[authstateid]);
 	return 1;
 }
@@ -148,7 +150,7 @@ int authmgtGetCompletedPeerAddress(struct s_authmgt *mgt, int *remote_peerid, st
 
 	if(!authGetRemotePeerID(&mgt->authstate[mgt->current_completed_id], remote_peerid)) return 0;
 	*remote_peeraddr = mgt->peeraddr[mgt->current_completed_id];
-	
+
 	return 1;
 }
 
@@ -186,29 +188,29 @@ int authmgtGetNextMsg(struct s_authmgt *mgt, struct s_msg *out_msg, struct s_pee
 	int tnow = utilGetClock();
 	int authstateid;
 	int i;
-    
+
 	for(i=0; i<used; i++) {
 		authstateid = idspNext(&mgt->idsp);
 		if((tnow - mgt->lastrecv[authstateid]) >= AUTHMGT_RECV_TIMEOUT) { // check if auth session has expired
             authmgtDelete(mgt, authstateid);
             continue;
         }
-        
+
         if((tnow - mgt->lastsend[authstateid]) <= AUTHMGT_RESEND_TIMEOUT) { // only send one auth message per specified time interval and session
             continue;
         }
-        
+
         if(authGetNextMsg(&mgt->authstate[authstateid], out_msg)) {
             mgt->lastsend[authstateid] = tnow;
             *target = mgt->peeraddr[authstateid];
-            
+
             CREATE_HUMAN_IP(target);
             debugf("[%d] New AUTH packet for %s created, size: %d", authstateid, humanIp, out_msg->len);
-            
+
             return 1;
         }
     }
-    
+
 	return 0;
 }
 
@@ -248,61 +250,61 @@ int authmgtDecodeMsg(struct s_authmgt *mgt, const unsigned char *msg, const int 
 	int tnow = utilGetClock();
 	int newsession;
 	int dupid;
-    
+
     CREATE_HUMAN_IP(peeraddr);
-    
+
     debugf("[%s] AUTH message received", humanIp);
-    
+
 	if(msg_len <= 4) {
         debugf("[%s] Wrong AUTH message size: %d", humanIp, msg_len);
         return 0;
     }
-    
+
     authid = utilReadInt32(msg);
     if(authid > 0) {
         // message belongs to existing auth session
         authstateid = (authid - 1);
-        
+
         debugf("Found active auth session: %d", authstateid);
         if(authstateid >= idspSize(&mgt->idsp)) {
             debugf("[%s] wrong auth state ID", humanIp);
             return 0;
         }
-        
+
         if(!authDecodeMsg(&mgt->authstate[authstateid], msg, msg_len)) {
             debugf("[%s] failed to decode AUTH message", humanIp);
             return 0;
         }
-        
+
         mgt->lastrecv[authstateid] = tnow;
         mgt->peeraddr[authstateid] = *peeraddr;
         if(mgt->fastauth) {
             mgt->lastsend[authstateid] = (tnow - authmgt_RESEND_TIMEOUT - 3);
         }
-        
+
         if((authIsAuthed(&mgt->authstate[authstateid])) && (!authIsCompleted(&mgt->authstate[authstateid]))) mgt->current_authed_id = authstateid;
-        
+
         if((authIsCompleted(&mgt->authstate[authstateid])) && (!authIsPeerCompleted(&mgt->authstate[authstateid]))) {
             msgf("Host %s authorized", humanIp);
             mgt->current_completed_id = authstateid;
         }
-        
+
         return 1;
     } else if(authid == 0) {
         debugf("starting new session for %s, authid: %d", humanIp, authid);
         // message requests new auth session
         dupid = authmgtFindAddr(mgt, peeraddr);
-        
+
         // we already have this session
         if(dupid >= 0) {
             // auth session with same PeerAddr found.
             if(authIsPreauth(&mgt->authstate[dupid])) {
                 return 0;
             }
-        
+
             authmgtDelete(mgt, dupid);
         }
-        
+
         authstateid = authmgtNew(mgt, peeraddr);
         if(authstateid < 0) {
             // all auth slots are full, search for unused sessions that can be replaced
@@ -313,7 +315,7 @@ int authmgtDecodeMsg(struct s_authmgt *mgt, const unsigned char *msg, const int 
                 debugf("new auth session started for %s, authstateid %d", humanIp, authstateid);
             }
         }
-        
+
         if(!(authstateid < 0)) {
             if(authDecodeMsg(&mgt->authstate[authstateid], msg, msg_len)) {
                 mgt->lastrecv[authstateid] = tnow;
@@ -327,9 +329,9 @@ int authmgtDecodeMsg(struct s_authmgt *mgt, const unsigned char *msg, const int 
                 authmgtDelete(mgt, authstateid);
             }
         }
-        
+
     }
-    
+
     return 0;
 }
 
@@ -347,12 +349,12 @@ void authmgtReset(struct s_authmgt *mgt) {
 	for(i=0; i<count; i++) {
 		authReset(&mgt->authstate[i]);
 	}
-    
+
 	idspReset(&mgt->idsp);
 	mgt->fastauth = 0;
 	mgt->current_authed_id = -1;
 	mgt->current_completed_id = -1;
-    
+
     debug("auth manager RESET completed");
 }
 
@@ -360,51 +362,51 @@ void authmgtReset(struct s_authmgt *mgt) {
 // Create auth manager object.
 int authmgtCreate(struct s_authmgt *mgt, struct s_netid *netid, const int auth_slots, struct s_nodekey *local_nodekey, struct s_dh_state *dhstate) {
     debug("Initializing AuthMgt");
-    
+
 	int ac;
 	struct s_auth_state *authstate_mem;
 	struct s_peeraddr *peeraddr_mem;
 	int *lastsend_mem;
 	int *lastrecv_mem;
-    
+
 	if(auth_slots <= 0) {
         debug("No auth slots available");
         return 0;
     }
-    
+
     lastsend_mem = malloc(sizeof(int) * auth_slots);
     if(lastsend_mem == NULL) {
         debug("failed to allocate memory for send_mem / auth_slots");
         return 0;
     }
-    
+
     lastrecv_mem = malloc(sizeof(int) * auth_slots);
     if(lastrecv_mem == NULL) {
         debug("failed to allocate memory for recv_mem / auth_slots");
         return 0;
     }
-    
+
     authstate_mem = malloc(sizeof(struct s_auth_state) * auth_slots);
-    
+
     if(authstate_mem == NULL) {
         free(authstate_mem);
         debug("failed to allocate memory for authstate");
         return 0;
     }
-    
+
     peeraddr_mem = malloc(sizeof(struct s_peeraddr) * auth_slots);
     if(peeraddr_mem == NULL) {
         free(authstate_mem); free(peeraddr_mem);
         debug("failed to allocate memory for peeraddr_mem");
         return 0;
     }
-    
+
     ac = 0;
     while(ac < auth_slots) {
         if(!authCreate(&authstate_mem[ac], netid, local_nodekey, dhstate, (ac + 1))) break;
         ac++;
     }
-    
+
     if(!(ac < auth_slots)) {
         if(idspCreate(&mgt->idsp, auth_slots)) {
             mgt->lastsend = lastsend_mem;
@@ -419,7 +421,7 @@ int authmgtCreate(struct s_authmgt *mgt, struct s_netid *netid, const int auth_s
         ac--;
         authDestroy(&authstate_mem[ac]);
     }
-    
+
 
     return 0;
 }

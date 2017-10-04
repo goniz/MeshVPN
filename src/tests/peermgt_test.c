@@ -1,21 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2014 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_PEERMGT_TEST_C
 #define F_PEERMGT_TEST_C
@@ -80,14 +82,14 @@ static int peermgtTestsuiteRun(struct s_peermgt_test *teststate) {
 	int l;
 	struct s_peeraddr addr = {{0}};
 	struct s_peeraddr sourceaddr = {{0}};
-	
+
 	/*
 	const char *msg1_text = "hello world!";
 	struct s_msg msg1 = { .msg = (unsigned char *)msg1_text, .len = strlen(msg1_text) };
-	
+
 	const char *msg2_text = "foobar!";
 	struct s_msg msg2 = { .msg = (unsigned char *)msg2_text, .len = strlen(msg2_text) };
-	
+
 	const char *msg3_text = "hi all!";
 	struct s_msg msg3 = { .msg = (unsigned char *)msg3_text, .len = strlen(msg3_text) };
 
@@ -97,9 +99,9 @@ static int peermgtTestsuiteRun(struct s_peermgt_test *teststate) {
 	struct s_msg longmsg2 = { .msg = (unsigned char *)longmsg_text, .len = 2048 };
 	struct s_msg longmsg3 = { .msg = (unsigned char *)longmsg_text, .len = 3072 };
 	*/
-	
+
 	struct s_msg msgr;
-	
+
 	for(r=0; r<10000; r++) {
 		// start some events
 		switch(r) {
@@ -159,7 +161,7 @@ static int peermgtTestsuiteRun(struct s_peermgt_test *teststate) {
 			default:
 				break;
 		}
-		
+
 		// route the packets
 		for(i=0; i<peermgtTestsuite_NODECOUNT; i++) {
 			peermgtTestsuiteGetAddr(&sourceaddr, i);
@@ -195,11 +197,11 @@ static int peermgtTestsuiteRun(struct s_peermgt_test *teststate) {
 			}
 		}
 		printf("\n");
-		
+
 		// sleep
 		sleep(1);
 	}
-	
+
 	return 1;
 }
 

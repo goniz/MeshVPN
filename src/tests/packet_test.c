@@ -1,21 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2012 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_PACKET_TEST_C
 #define F_PACKET_TEST_C
@@ -45,17 +47,17 @@ static int packetTestsuiteMsg(const int random_msg) {
 	struct s_seq_state seqstate;
 	char str[4096];
 	int len;
-	
+
 	memset(secret, 23, 64);
 	memset(nonce, 5, 16);
-	
+
 	cryptoCreate(ctx, 2);
-	
+
 	if(!cryptoSetKeys(&ctx[0], 1, secret, 64, nonce, 16)) return 0;
 	if(!cryptoSetKeys(&ctx[1], 1, secret, 64, nonce, 16)) return 0;
 
 	seqInit(&seqstate, 0);
-	
+
 	memset(plbuf, 0, packetTestsuite_PLBUF_SIZE);
 	if(random_msg) RAND_pseudo_bytes(plbuf, packetTestsuite_PLBUF_SIZE);
 	else strcpy((char *)plbuf, "moo");
@@ -77,7 +79,7 @@ static int packetTestsuiteMsg(const int random_msg) {
 	if(!memcmp(testdatadec.pl_buf, testdata.pl_buf, packetTestsuite_PLBUF_SIZE) == 0) return 0;
 	utilByteArrayToHexstring(str, 4096, testdatadec.pl_buf, testdatadec.pl_length);
 	printf("%s (len=%d, peerid=%d)\n", str, testdatadec.pl_length, testdatadec.peerid);
-	
+
 	cryptoDestroy(ctx, 2);
 
 	return 1;

@@ -1,21 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2014 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_AUTH_C
 #define F_AUTH_C
@@ -72,26 +74,26 @@ int authGenSigIn(struct s_auth_state *authstate, unsigned char *siginbuf, const 
  * 4 bytes  - local auth ID
  * 4 bytes  - session token
  * 32 bytes - network ID
- * 
+ *
  */
 void authGenS0(struct s_auth_state *authstate) {
 	// generate msg(remote_authid, msgnum, checksum, authid, sesstoken, netid)
 	int msgnum = authstate->state;
 	memcpy(authstate->nextmsg, authstate->remote_authid, 4);
 	utilWriteInt16(&authstate->nextmsg[4], msgnum);
-    
+
     memset(&authstate->nextmsg[(4 + 2)], '\0', 8);
 	memcpy(&authstate->nextmsg[(4 + 2 + 8)], &authstate->local_authid, 4);
 	memcpy(&authstate->nextmsg[(4 + 2 + 8 + 4)], &authstate->local_sesstoken, 4);
 	memcpy(&authstate->nextmsg[(4 + 2 + 8 + 4 + 4)], authstate->netid->id, NETID_SIZE);
-	
+
     // calculate 8 bytes hash
     if(!cryptoCalculateSHA256(&authstate->nextmsg[(4 + 2)], 8, &authstate->nextmsg[(4 + 2 + 8)], (4 + 4 + NETID_SIZE))) {
         authstate->nextmsg_size = 0;
         debug("failed to create S0 SHA checksum");
         return;
     }
-    
+
     authstate->nextmsg_size = (4 + 2 + 8 + 4 + 4 + NETID_SIZE);
     debugf("Generated S0 message, size %d bytes, RemoteID: %d", authstate->nextmsg_size, authstate->remote_authid);
 }
@@ -106,34 +108,34 @@ int authDecodeS0(struct s_auth_state *authstate, const unsigned char *msg, const
         debugf("wrong S0 message size: %d", msg_len);
         return 0;
     }
-    
+
     msgnum = utilReadInt16(&msg[4]);
     int expected_state = authstate->state + 1;
     if(msgnum != expected_state) {
         debugf("wrong S0 msgnum: %d, waiting for %d", msgnum, expected_state);
         return 0;
     }
-    
+
     if(!cryptoCalculateSHA256(checksum, 8, &msg[(4 + 2 + 8)], (4 + 4 + NETID_SIZE))) {
         debug("unable to create SHA256 sum for S0 message");
         return 0;
     }
-    
+
     if(memcmp(checksum, &msg[(4 + 2)], 8) != 0) {
         debug("checksum verification failed for S0");
         return 0;
     }
-    
+
     if(memcmp(authstate->netid->id, &msg[(4 + 2 + 8 + 4 + 4)], NETID_SIZE) != 0) {
         debug("NetID verification failed for S0 message");
         return 0;
     }
-    
+
     memcpy(authstate->remote_authid, &msg[(4 + 2 + 8)], 4);
     memcpy(authstate->remote_sesstoken, &msg[(4 + 2 + 8 + 4)], 4);
-    
+
     debugf("S0 message is valid. Remote AuthID: %d, Session token: %d",authstate->remote_authid, authstate->remote_sesstoken);
-    
+
     return 1;
 }
 
@@ -144,36 +146,36 @@ int authDecodeS0(struct s_auth_state *authstate, const unsigned char *msg, const
  * 2 bytes - msgnum
  * 8 bytes - checksum
  * 4 bytes - session token
- 
+
  */
 void authGenS1(struct s_auth_state *authstate) {
 	// generate msg(remote_authid, msgnum, checksum, sesstoken, nonce, dhkey_len, dhkey)
 	int msgnum = authstate->state;
 	int dhsize;
-    
+
 	memcpy(authstate->nextmsg, authstate->remote_authid, 4);
 	utilWriteInt16(&authstate->nextmsg[4], msgnum);
     memset(&authstate->nextmsg[(4 + 2)], '\0', 8);
 	memcpy(&authstate->nextmsg[(4 + 2 + 8)], &authstate->remote_sesstoken, 4);
 	memcpy(&authstate->nextmsg[(4 + 2 + 8 + 4)], authstate->local_nonce, auth_NONCESIZE);
-    
+
 	dhsize = dhGetPubkey(&authstate->nextmsg[(4 + 2 + 8 + 4 + AUTH_NONCESIZE + 2)], dh_MAXSIZE, authstate->dhstate);
-	
+
     if(dhsize < dh_MINSIZE || dhsize > dh_MAXSIZE) {
         debugf("wrong DH size passed %d", dhsize);
         authstate->nextmsg_size = 0;
         return;
     }
-    
+
     utilWriteInt16(&authstate->nextmsg[(4 + 2 + 8 + 4 + AUTH_NONCESIZE)], dhsize);
-    
+
     if(!cryptoCalculateSHA256(&authstate->nextmsg[(4 + 2)], 8, &authstate->nextmsg[(4 + 2 + 8)], (4 + AUTH_NONCESIZE + 2 + dhsize))) {
         debug("failed to calculate S1 SHA checksum");
         authstate->nextmsg_size = 0;
         return;
     }
-    
-    
+
+
     authstate->nextmsg_size = (4 + 2 + 8 + 4 + AUTH_NONCESIZE + 2 + dhsize);
 }
 
@@ -185,49 +187,49 @@ int authDecodeS1(struct s_auth_state *authstate, const unsigned char *msg, const
 	unsigned char shared_nonce[auth_NONCESIZE + auth_NONCESIZE];
 	unsigned char checksum[8];
     int min_msg_len = (4 + 2 + 8 + 4 + auth_NONCESIZE + 2);
-    
+
     if(msg_len <= min_msg_len) {
         debugf("wrong msg_len %d, minimum %d", msg_len, min_msg_len);
         return 0;
     }
-    
+
     msgnum = utilReadInt16(&msg[4]);
     int expected_state = authstate->state + 1;
     if(msgnum != expected_state) {
         debugf("wrong msg_num, current %d, expected %d", msgnum, expected_state);
         return 0;
     }
-    
+
     if(memcmp(authstate->local_sesstoken, &msg[(4 + 2 + 8)], 4) != 0) {
         debug("different local and remote session tokens");
         return 0;
     }
-    
+
     dhsize = utilReadInt16(&msg[(4 + 2 + 8 + 4 + auth_NONCESIZE)]);
     if(!((dhsize > dh_MINSIZE) && (dhsize <= dh_MAXSIZE) && (msg_len >= (4 + 2 + 8 + 4 + auth_NONCESIZE + 2 + dhsize)))) {
         debug("DH size error");
         return 0;
     }
-    
+
     if(!cryptoCalculateSHA256(checksum, 8, &msg[(4 + 2 + 8)], (4 + auth_NONCESIZE + 2 + dhsize))) {
         debug("failed to calculate SHA256");
         return 0;
     }
-    
+
     if(memcmp(checksum, &msg[(4 + 2)], 8) != 0) {
         debug("checksum verification failed");
         return 0;
     }
-    
+
     authstate->remote_dhkey_size = dhsize;
     memcpy(authstate->remote_dhkey, &msg[(4 + 2 + 8 + 4 + auth_NONCESIZE + 2)], dhsize);
     memcpy(authstate->remote_nonce, &msg[(4 + 2 + 8 + 4)], auth_NONCESIZE);
-    
+
     if(memcmp(authstate->local_nonce, authstate->remote_nonce, auth_NONCESIZE) == 0) {
         debug("different local and remote nonce");
         return 0;
     }
-    
+
     if((msgnum % 2) == 0) {
         memcpy(&shared_nonce[0], &msg[(4 + 2 + 8 + 4)], auth_NONCESIZE);
         memcpy(&shared_nonce[auth_NONCESIZE], authstate->local_nonce, auth_NONCESIZE);
@@ -235,12 +237,12 @@ int authDecodeS1(struct s_auth_state *authstate, const unsigned char *msg, const
         memcpy(&shared_nonce[0], authstate->local_nonce, auth_NONCESIZE);
         memcpy(&shared_nonce[auth_NONCESIZE], &msg[(4 + 2 + 8 + 4)], auth_NONCESIZE);
     }
-    
+
     if(!dhGenCryptoKeys(authstate->crypto_ctx, auth_CRYPTOCTX_COUNT, authstate->dhstate, &msg[(4 + 2 + 8 + 4 + auth_NONCESIZE + 2)], dhsize, shared_nonce, (auth_NONCESIZE + auth_NONCESIZE))) {
         debug("failed to generate DH crypto keys");
         return 0;
     }
-    
+
     debugf("S1 message decoded for Remote %d <-> Local %d", authstate->remote_authid, authstate->local_authid);
 	return 1;
 }
@@ -254,10 +256,10 @@ int authDecodeS1(struct s_auth_state *authstate, const unsigned char *msg, const
  *   2 bytes - pubkey_len
  *   76 - 416 bytes - public key
  *   ?? bytes - RSA signature size
- *   ?? bytes - signature (authid, msgnum, local_nonce, remote_nonce, remote_dhkey, local_dhkey), 
+ *   ?? bytes - signature (authid, msgnum, local_nonce, remote_nonce, remote_dhkey, local_dhkey),
  *   32 bytes - hmac(pubkey)
  * )
- 
+
  */
 void authGenS2(struct s_auth_state * as) {
 	// generate msg(remote_authid, msgnum, enc(pubkey_len, pubkey, sig_len, sig(authid, msgnum, local_nonce, remote_nonce, remote_dhkey, local_dhkey), hmac(pubkey)))
@@ -277,13 +279,13 @@ void authGenS2(struct s_auth_state * as) {
 	siginbuf_size = authGenSigIn(as, siginbuf, &unencrypted_nextmsg[4]);
 	local_nodekey = as->local_nodekey;
 	nksize = nodekeyGetDER(&unencrypted_nextmsg[(4 + 2 + 2)], nodekey_MAXSIZE, local_nodekey);
-	
+
     if(nksize <= nodekey_MINSIZE) {
         as->nextmsg_size = 0;
         debugf("wrong local nodekey size, got %d", nksize);
         return;
     }
-    
+
     utilWriteInt16(&unencrypted_nextmsg[(4 + 2)], nksize);
     rsakey = &local_nodekey->key;
     signsize = rsaSign(rsakey, &unencrypted_nextmsg[(4 + 2 + 2 + nksize + 2)], nodekey_MAXSIZE, siginbuf, siginbuf_size);
@@ -292,23 +294,23 @@ void authGenS2(struct s_auth_state * as) {
         debug("wrong RSA signature size");
         return;
     }
-    
+
     utilWriteInt16(&unencrypted_nextmsg[(4 + 2 + 2 + nksize)], signsize);
     if(!cryptoHMAC(&as->crypto_ctx[auth_CRYPTOCTX_AUTH], &unencrypted_nextmsg[(4 + 2 + 2 + nksize + 2 + signsize)], auth_HMACSIZE, &unencrypted_nextmsg[(4 + 2 + 2)], nksize)) {
         as->nextmsg_size = 0;
         debug("failed to generate HMAC");
         return;
     }
-    
+
     unencrypted_nextmsg_size = (4 + 2 + 2 + nksize + 2 + signsize + auth_HMACSIZE);
     encsize = cryptoEnc(&as->crypto_ctx[auth_CRYPTOCTX_IDP], &as->nextmsg[(4 + 2)], (auth_MAXMSGSIZE - 2 - 4), &unencrypted_nextmsg[(2 + 4)], (unencrypted_nextmsg_size - 2 - 4), auth_IDPHMACSIZE, auth_IDPIVSIZE);
-    
+
     if(encsize <= 0) {
         debug("failed to encrypt S2 message");
         as->nextmsg_size = 0;
         return;
     }
-    
+
     as->nextmsg_size = (encsize + 4 + 2);
     debugf("S2 message generated, size: %d, AuthID: %d", as->nextmsg_size, as->remote_authid);
 }
@@ -324,26 +326,26 @@ int authDecodeS2(struct s_auth_state *authstate, const unsigned char *msg, const
 	unsigned char siginbuf[auth_SIGINBUFSIZE];
 	unsigned char decmsg[auth_MAXMSGSIZE_S2];
 	int siginbuf_size;
-	
+
     if(msg_len <= 10) {
         debugf("small msg_len for S2 message %d", msg_len);
         return 0;
     }
-    
+
     memcpy(decmsg, msg, 6);
     msgnum = utilReadInt16(&decmsg[4]);
     if(msgnum != (authstate->state + 1)) {
         debugf("wrong msgnum received %d, current state: %d", msgnum, authstate->state);
         return 0;
     }
-    
+
     decmsg_len = (4 + 2 + cryptoDec(&authstate->crypto_ctx[auth_CRYPTOCTX_IDP], &decmsg[(4 + 2)], (auth_MAXMSGSIZE_S2 - 2 - 4), &msg[(4 + 2)], (msg_len - 2 - 4), auth_IDPHMACSIZE, auth_IDPIVSIZE)); // decrypt IDP layer
-    
+
     if(decmsg_len <= 10) {
         debugf("S2 decoded message wrong size, got: %d", decmsg_len);
         return 0;
     }
-    
+
     nksize = utilReadInt16(&decmsg[(4 + 2)]);
     if((nksize > nodekey_MINSIZE) && (nksize <= nodekey_MAXSIZE) && (decmsg_len > (10 + nksize))) {
         signsize = utilReadInt16(&decmsg[(4 + 4 + nksize)]);
@@ -362,7 +364,7 @@ int authDecodeS2(struct s_auth_state *authstate, const unsigned char *msg, const
             }
         }
     }
-    
+
 	return 0;
 }
 
@@ -374,13 +376,13 @@ void authGenS3(struct s_auth_state *authstate) {
 	int unencrypted_nextmsg_size = (4 + 2 + auth_NONCESIZE + seq_SIZE + 4 + 8);
 	int msgnum = authstate->state;
 	int encsize;
-    
+
 	if(!authstate->local_cneg_set) {
         authstate->nextmsg_size = 0;
         debug("S3 generation failed, wrong negotiation set");
         return;
     }
-    
+
     memcpy(unencrypted_nextmsg, authstate->remote_authid, 4);
     utilWriteInt16(&unencrypted_nextmsg[4], msgnum);
     memcpy(authstate->nextmsg, unencrypted_nextmsg, 6);
@@ -389,13 +391,13 @@ void authGenS3(struct s_auth_state *authstate) {
     utilWriteInt32(&unencrypted_nextmsg[(4 + 2 + auth_NONCESIZE + seq_SIZE)], authstate->local_peerid);
     memcpy(&unencrypted_nextmsg[(4 + 2 + auth_NONCESIZE + seq_SIZE + 4)], authstate->local_flags, 8);
     encsize = cryptoEnc(&authstate->crypto_ctx[auth_CRYPTOCTX_CNEG], &authstate->nextmsg[(4 + 2)], (auth_MAXMSGSIZE - 2 - 4), &unencrypted_nextmsg[(4 + 2)], (unencrypted_nextmsg_size - 2 - 4), auth_CNEGHMACSIZE, auth_CNEGIVSIZE);
-    
+
     if(encsize <= 0) {
         authstate->nextmsg_size = 0;
         debug("S3 generation failed, wrong encrypted data size");
         return;
     }
-    
+
     debug("S3 generation successfull");
     authstate->nextmsg_size = (encsize + 4 + 2);
 }
@@ -406,25 +408,25 @@ int authDecodeS3(struct s_auth_state *authstate, const unsigned char *msg, const
 	int msgnum;
 	int decmsg_len;
     int expected_state;
-    
+
 	unsigned char decmsg[auth_MAXMSGSIZE_S3];
 	if(msg_len <= 6) {
         debugf("S3 message verification failed. Wrong size: %d", msg_len );
         return 0;
     }
-    
-    
+
+
     memcpy(decmsg, msg, 6);
     msgnum = utilReadInt16(&decmsg[4]);
-    
+
     expected_state = authstate->state + 1;
     if(msgnum != expected_state) {
         debugf("S3 verification failed. Got state %d insead of ", msgnum, expected_state);
         return 0;
     }
-    
+
     decmsg_len = (4 + 2 + cryptoDec(&authstate->crypto_ctx[auth_CRYPTOCTX_CNEG], &decmsg[(4 + 2)], (auth_MAXMSGSIZE_S3 - 2 - 4), &msg[(4 + 2)], (msg_len - 2 - 4), auth_CNEGHMACSIZE, auth_CNEGIVSIZE));
-    
+
     if(decmsg_len >= (4 + 2 + auth_NONCESIZE + seq_SIZE + 4 + 8)) {
         memcpy(authstate->remote_keygen_nonce, &decmsg[(4 + 2)], auth_NONCESIZE);
         if((msgnum % 2) == 0) {
@@ -457,7 +459,7 @@ void authGenS4(struct s_auth_state *authstate) {
         debugf("HMAC generation failed for Remote %d <-> Local %d", authstate->remote_authid, authstate->local_authid);
         return;
     }
-    
+
     authstate->nextmsg_size = (6 + auth_NONCESIZE + auth_CNEGHMACSIZE);
     debugf("S4 message successfully generated", authstate->nextmsg_size);
 }
@@ -467,44 +469,44 @@ void authGenS4(struct s_auth_state *authstate) {
 int authDecodeS4(struct s_auth_state *authstate, const unsigned char *msg, const int msg_len) {
 	int msgnum;
     int min_msg_len = 6 + auth_NONCESIZE + auth_CNEGHMACSIZE;
-    
+
 	unsigned char hmac[AUTH_HMACSIZE];
-    
+
 	if(msg_len < min_msg_len) {
         debugf("S4 wrong msg_len, %d != %d", msg_len, min_msg_len);
         return 0;
     }
-    
+
     msgnum = utilReadInt16(&msg[4]);
     if(msgnum != (authstate->state + 1)) {
         debugf("S4 wrong msgnum, got %d", msgnum);
         return 0;
     }
-    
+
     if(!cryptoHMAC(&authstate->crypto_ctx[auth_CRYPTOCTX_CNEG], hmac, AUTH_HMACSIZE, &msg[6], auth_NONCESIZE)) {
         debug("S4 HMAC generation failed");
         return 0;
     }
-    
+
     if(memcmp(hmac, &msg[(6 + auth_NONCESIZE)], auth_CNEGHMACSIZE) != 0) {
         debug("S4 HMAC verification failed");
         return 0;
     }
-    
+
     debugf("S4 message successfully decoded. Remote %d <-> Local %d", authstate->remote_authid, authstate->local_authid);
-    
+
     return 1;
 }
 
 int authDecodeS5(struct s_auth_state * authstate, const unsigned char *msg, const int msg_len) {
     int msgnum;
-    
+
     msgnum = utilReadInt16(&msg[4]);
     if(msgnum != AUTH_STATE_FINISHED) {
         debug("S5 wrong state received");
         return 0;
     }
-    
+
     debugf("S5 message accepted. Msgnum: %d", msgnum);
     return 1;
 }
@@ -512,20 +514,20 @@ int authDecodeS5(struct s_auth_state * authstate, const unsigned char *msg, cons
 int authGenS5(struct s_auth_state *authstate) {
     // generate msg(msgnum)
     int msgnum = authstate->state;
-    
+
     memcpy(authstate->nextmsg, authstate->remote_authid, 4);
     utilWriteInt16(&authstate->nextmsg[4], msgnum);
     memcpy(&authstate->nextmsg[(4 + 2)], &authstate->remote_authid, 4);
 
     authstate->nextmsg_size = 4 + 2 + 4;
-    
+
     debugf("S5 message successfully generated, size %d, state: %d", authstate->nextmsg_size, msgnum);
 }
 
 // Generate auth message
 void authGenMsg(struct s_auth_state *authstate) {
 	int state = authstate->state;
-	
+
     switch(state) {
 		case AUTH_STATE_INITIATED:
 		case auth_S0b:
@@ -547,21 +549,21 @@ void authGenMsg(struct s_auth_state *authstate) {
 		case auth_S4b:
 			authGenS4(authstate);
 			break;
-            
+
         // generating ACK packet and finishing it
         case AUTH_STATE_FINISHED:
             authGenS5(authstate);
             break;
-            
+
         case AUTH_STATE_FINISH_ACK:
             authstate->nextmsg_size = 0;
             break;
-            
+
 		default:
 			authstate->nextmsg_size = 0;
 			break;
 	}
-    
+
     debugf("Generating state MSG, current state: %d, generated: %d", state, authstate->nextmsg_size);
 }
 
@@ -569,7 +571,7 @@ void authGenMsg(struct s_auth_state *authstate) {
 int authDecodeMsg(struct s_auth_state *authstate, const unsigned char *msg, const int msg_len) {
 	int state = authstate->state;
 	int newstate = state;
-    
+
 	switch(state) {
 		case auth_IDLE: if(authDecodeS0(authstate, msg, msg_len)) newstate = auth_S0b; break;
 		case auth_S0a:  if(authDecodeS0(authstate, msg, msg_len)) newstate = auth_S1a; break;
@@ -583,19 +585,19 @@ int authDecodeMsg(struct s_auth_state *authstate, const unsigned char *msg, cons
 		case auth_S4a:  if(authDecodeS4(authstate, msg, msg_len)) newstate = auth_S5a; break;
         case auth_S4b:  if(authDecodeS5(authstate, msg, msg_len)) newstate = AUTH_STATE_FINISH_ACK; break;
 	}
-    
+
     debugf("AUTH state request %d, newstate %d, nextmsg_size: %d", state, newstate, authstate->nextmsg_size);
 
     if(state == newstate && state != AUTH_STATE_FINISH_ACK) {
         debugf("Failed to change state %d => %d", state, state + 1);
         return 0;
     }
-    
+
     debugf("AUTH state changed %d => %d", state, newstate);
-    
+
     authstate->state = newstate;
     authGenMsg(authstate);
-    
+
     return 1;
 }
 
@@ -630,10 +632,10 @@ int authStart(struct s_auth_state *authstate) {
         debugf("failed to start new AUTH session, current status %d", authstate->state);
         return 0;
     }
-    
+
     authstate->state = AUTH_STATE_INITIATED;
     authGenMsg(authstate);
-    
+
     return 1;
 }
 
@@ -725,15 +727,15 @@ int authGetNextMsg(struct s_auth_state *authstate, struct s_msg *out_msg) {
 	if(authstate->nextmsg_size <= 0) {
         return 0;
     }
-    
+
     out_msg->msg = authstate->nextmsg;
     out_msg->len = authstate->nextmsg_size;
-    
+
     if(authstate->state == AUTH_STATE_FINISHED) {
         authstate->nextmsg_size = 0;
         debug("we are in finished state, fire and forget about message");
     }
-    
+
     debugf("Got next MSG, current state %d, msg size: %d", authstate->state, authstate->nextmsg_size);
     return 1;
 }
@@ -759,28 +761,28 @@ int authCreate(struct s_auth_state *authstate, struct s_netid *netid, struct s_n
         debug("wrong DH state");
         return 0;
     }
-    
+
     if(local_nodekey == NULL) {
         debug("wrong local Node key");
         return 0;
     }
-    
+
     if(netid == NULL) {
         debug("wrong network ID");
         return 0;
     }
-    
+
     if(!rsaIsValid(&local_nodekey->key)) {
         debug("local RSA key is invalid");
         return 0;
     }
-    
+
 	if(!rsaIsPrivate(&local_nodekey->key)) return 0;
-	
+
 	authstate->dhstate = dhstate;
 	authstate->local_nodekey = local_nodekey;
 	authstate->netid = netid;
-	
+
     if(nodekeyCreate(&authstate->remote_nodekey)) {
 		if(cryptoCreate(authstate->crypto_ctx, auth_CRYPTOCTX_COUNT)) {
 			authReset(authstate);

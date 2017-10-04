@@ -1,21 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2015 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_MAP_C
 #define F_MAP_C
@@ -91,12 +93,12 @@ int mapSplayPrefix(struct s_map *map, const void *prefix, const int prefixlen) {
 	int r = maxnode;
 	int cur_cmp;
 	int y;
-	
+
 	if(cur_nodeid < 0) return ret;
-	
+
 	map->left[maxnode] = -1;
 	map->right[maxnode] = -1;
-	
+
 	for(;;) {
 		cur_cmp = mapComparePrefixExt(map, cur_nodeid, prefix, prefixlen);
 		if(cur_cmp > 0) {
@@ -130,13 +132,13 @@ int mapSplayPrefix(struct s_map *map, const void *prefix, const int prefixlen) {
 			break;
 		}
 	}
-	
+
 	map->right[l] = map->left[cur_nodeid];
 	map->left[r] = map->right[cur_nodeid];
 	map->left[cur_nodeid] = map->right[maxnode];
 	map->right[cur_nodeid] = map->left[maxnode];
 	map->rootid = cur_nodeid;
-	
+
 	return ret;
 }
 
@@ -267,7 +269,7 @@ void mapSetValueByID(struct s_map *map, const int id, const void *value) {
 int mapRemoveReturnID(struct s_map *map, const void *key) {
 	int x = mapSplayKey(map, key);
 	int rootid = map->rootid;
-	
+
 	if(!x) return -1;
 
 	idspDelete(&map->idsp, rootid);
@@ -307,7 +309,7 @@ int mapAddReturnID(struct s_map *map, const void *key, const void *value) {
 	int x;
 	int rootid;
 	int nodeid;
-	
+
 	// check if map is full
 	if(!(idspUsedCount(&map->idsp) < idspSize(&map->idsp))) {
 		if(map->replace_old > 0) {
@@ -363,7 +365,7 @@ int mapAddReturnID(struct s_map *map, const void *key, const void *value) {
 
 	// update root ID
 	map->rootid = nodeid;
-	
+
 	return nodeid;
 }
 
@@ -450,7 +452,7 @@ int mapMemInit(struct s_map *map, const int mem_size, const int map_size, const 
 	const int min_mem_size = idsp_offset + (((idspMemSize(map_size) + (align_boundary - 1)) / align_boundary) * align_boundary);
 	struct s_idsp *idsp_new;
 	unsigned char *map_mem;
-	
+
 	// check parameters
 	if(!((map_size > 0) && (key_size > 0) && (value_size > 0))) return 0;
 

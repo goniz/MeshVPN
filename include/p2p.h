@@ -1,21 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2012 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef H_P2P
 #define H_P2P
@@ -32,16 +34,16 @@
 
 
 struct s_dfrag {
-    unsigned char *fragbuf;
-    int *used;
-    int *peerct;
-    int *peerid;
-    int64_t *seq;
-    int *length;
-    int *msglength;
-    int fragbuf_size;
-    int fragbuf_count;
-    int pos;
+        unsigned char *fragbuf;
+        int *used;
+        int *peerct;
+        int *peerid;
+        int64_t *seq;
+        int *length;
+        int *msglength;
+        int fragbuf_size;
+        int fragbuf_count;
+        int pos;
 };
 
 
@@ -55,25 +57,25 @@ struct s_dfrag {
 
 // The sequence number state structure.
 struct s_seq_state {
-    int64_t start;
-    uint64_t mask;
+        int64_t start;
+        uint64_t mask;
 };
 
 // The NodeDB addrdata structure.
 struct s_nodedb_addrdata {
-    int lastseen;
-    int lastseen_t;
-    int lastconnect;
-    int lastconnect_t;
-    int lastconntry;
-    int lastconntry_t;
+        int lastseen;
+        int lastseen_t;
+        int lastconnect;
+        int lastconnect_t;
+        int lastconntry;
+        int lastconntry_t;
 };
 
 
 // The NodeDB structure.
 struct s_nodedb {
-    struct s_map *addrdb;
-    int num_peeraddrs;
+        struct s_map *addrdb;
+        int num_peeraddrs;
 };
 
 
@@ -151,7 +153,7 @@ struct s_nodedb {
 
 // The NetID structure.
 struct s_netid {
-    unsigned char id[netid_SIZE];
+        unsigned char id[netid_SIZE];
 };
 
 // Internal address types.
@@ -170,22 +172,22 @@ struct s_netid {
 
 // The PeerAddr structure.
 struct s_peeraddr {
-    unsigned char addr[peeraddr_SIZE];
+        unsigned char addr[peeraddr_SIZE];
 };
 
 // The peer manager data structure.
 struct s_peermgt_data {
-    int conntime;
-    int lastrecv;
-    int lastsend;
-    int lastpeerinfo;
-    int lastpeerinfosendpeerid;
-    struct s_peeraddr remoteaddr;
-    int remoteflags;
-    int remoteid;
-    int64_t remoteseq;
-    struct s_seq_state seq;
-    int state;
+        int conntime;
+        int lastrecv;
+        int lastsend;
+        int lastpeerinfo;
+        int lastpeerinfosendpeerid;
+        struct s_peeraddr remoteaddr;
+        int remoteflags;
+        int remoteid;
+        int64_t remoteseq;
+        struct s_seq_state seq;
+        int state;
 };
 
 
@@ -198,71 +200,71 @@ struct s_peermgt_data {
 
 // The auth manager structure.
 struct s_authmgt {
-    struct s_idsp idsp;
-    struct s_auth_state *authstate;
-    struct s_peeraddr *peeraddr;
-    int *lastrecv;
-    int *lastsend;
-    int fastauth;
-    int current_authed_id;
-    int current_completed_id;
+        struct s_idsp idsp;
+        struct s_auth_state *authstate;
+        struct s_peeraddr *peeraddr;
+        int *lastrecv;
+        int *lastsend;
+        int fastauth;
+        int current_authed_id;
+        int current_completed_id;
 };
 
 
 // The peer manager structure.
 struct s_peermgt {
-    struct s_netid netid;
-    struct s_map map;
-    struct s_nodedb nodedb;
-    struct s_nodedb relaydb;
-    struct s_authmgt authmgt;
-    struct s_dfrag dfrag;
-    struct s_nodekey *nodekey;
-    struct s_peermgt_data *data;
-    struct s_crypto *ctx;
-    int localflags;
-    unsigned char msgbuf[peermgt_MSGSIZE_MAX];
-    unsigned char relaymsgbuf[peermgt_MSGSIZE_MAX];
-    unsigned char rrmsgbuf[peermgt_MSGSIZE_MAX];
-    int msgsize;
-    int msgpeerid;
-    struct s_msg outmsg;
-    int outmsgpeerid;
-    int outmsgbroadcast;
-    int outmsgbroadcastcount;
-    struct s_msg rrmsg;
-    int rrmsgpeerid;
-    int rrmsgtype;
-    int rrmsgusetargetaddr;
-    struct s_peeraddr rrmsgtargetaddr;
-    int loopback;
-    int fragmentation;
-    int fragoutpeerid;
-    int fragoutcount;
-    int fragoutsize;
-    int fragoutpos;
-    int lastconntry;
-    int tinit;
+        struct s_netid netid;
+        struct s_map map;
+        struct s_nodedb nodedb;
+        struct s_nodedb relaydb;
+        struct s_authmgt authmgt;
+        struct s_dfrag dfrag;
+        struct s_nodekey *nodekey;
+        struct s_peermgt_data *data;
+        struct s_crypto *ctx;
+        int localflags;
+        unsigned char msgbuf[peermgt_MSGSIZE_MAX];
+        unsigned char relaymsgbuf[peermgt_MSGSIZE_MAX];
+        unsigned char rrmsgbuf[peermgt_MSGSIZE_MAX];
+        int msgsize;
+        int msgpeerid;
+        struct s_msg outmsg;
+        int outmsgpeerid;
+        int outmsgbroadcast;
+        int outmsgbroadcastcount;
+        struct s_msg rrmsg;
+        int rrmsgpeerid;
+        int rrmsgtype;
+        int rrmsgusetargetaddr;
+        struct s_peeraddr rrmsgtargetaddr;
+        int loopback;
+        int fragmentation;
+        int fragoutpeerid;
+        int fragoutcount;
+        int fragoutsize;
+        int fragoutpos;
+        int lastconntry;
+        int tinit;
 };
 
 
 struct s_p2psec {
-    struct s_peermgt mgt;
-    struct s_nodekey nk;
-    struct s_dh_state dh;
-    int started;
-    int key_loaded;
-    int dh_loaded;
-    int peer_count;
-    int auth_count;
-    int loopback_enable;
-    int fastauth_enable;
-    int fragmentation_enable;
-    int flags;
-    char password[1024];
-    int password_len;
-    char netname[1024];
-    int netname_len;
+        struct s_peermgt mgt;
+        struct s_nodekey nk;
+        struct s_dh_state dh;
+        int started;
+        int key_loaded;
+        int dh_loaded;
+        int peer_count;
+        int auth_count;
+        int loopback_enable;
+        int fastauth_enable;
+        int fragmentation_enable;
+        int flags;
+        char password[1024];
+        int password_len;
+        char netname[1024];
+        int netname_len;
 };
 
 int netidSet(struct s_netid *netid, const char *netname, const int netname_len);
@@ -369,13 +371,13 @@ void nodedbStatus(struct s_nodedb *db, char *report, const int report_len);
 
 // packet data structure
 struct s_packet_data {
-    int peerid;
-    int64_t seq;
-    int pl_length;
-    int pl_type;
-    int pl_options;
-    unsigned char *pl_buf;
-    int pl_buf_size;
+        int peerid;
+        int64_t seq;
+        int pl_length;
+        int pl_type;
+        int pl_options;
+        unsigned char *pl_buf;
+        int pl_buf_size;
 };
 
 
@@ -410,13 +412,13 @@ int dfragLength(struct s_dfrag *dfrag, const int id);
 unsigned char *dfragGet(struct s_dfrag *dfrag, const int id);
 
 // Calculate message length and save result.
-int dfragCalcLength(struct s_dfrag *dfrag, const int id) ;
+int dfragCalcLength(struct s_dfrag *dfrag, const int id);
 
 // Combine fragments to a message. Returns an ID if the message is completed or -1 in every other case.
 int dfragAssemble(struct s_dfrag *dfrag, const int peerct, const int peerid, const int64_t seq, const unsigned char *fragment, const int fragment_len, const int fragment_pos, const int fragment_count);
 
 // Create fragment buffer structure.
-int dfragCreate(struct s_dfrag *dfrag, const int size, const int count) ;
+int dfragCreate(struct s_dfrag *dfrag, const int size, const int count);
 
 // Destroy fragment buffer structure.
 void dfragDestroy(struct s_dfrag *dfrag);
@@ -437,7 +439,7 @@ int p2psecStart(struct s_p2psec *p2psec);
 
 void p2psecStop(struct s_p2psec *p2psec);
 
-int p2psecGetAddrSize() ;
+int p2psecGetAddrSize();
 
 int p2psecGetNodeIDSize();
 /**
@@ -457,7 +459,7 @@ int p2psecExportPrivkey(struct s_p2psec * p2psec, const char * keypath);
 /**
  * Generate or load private key from file
  */
-int p2psecGeneratePrivkey(struct s_p2psec *p2psec, const int bits) ;
+int p2psecGeneratePrivkey(struct s_p2psec *p2psec, const int bits);
 
 int p2psecLoadDH(struct s_p2psec *p2psec);
 
@@ -579,7 +581,7 @@ void peermgtSetLoopback(struct s_peermgt *mgt, const int enable);
 void peermgtSetFastauth(struct s_peermgt *mgt, const int enable);
 
 // Enable/disable packet fragmentation.
-void peermgtSetFragmentation(struct s_peermgt *mgt, const int enable) ;
+void peermgtSetFragmentation(struct s_peermgt *mgt, const int enable);
 
 // Set flags.
 void peermgtSetFlags(struct s_peermgt *mgt, const int flags);
@@ -631,7 +633,7 @@ int peermgtDecodePacket(struct s_peermgt *mgt, const unsigned char *packet, cons
 int peermgtRecvUserdata(struct s_peermgt *mgt, struct s_msg *recvmsg, struct s_nodeid *fromnodeid, int *frompeerid, int *frompeerct);
 
 // Send user data. Return 1 if successful.
-int peermgtSendUserdata(struct s_peermgt *mgt, const struct s_msg *sendmsg, const struct s_nodeid *tonodeid, const int topeerid, const int topeerct) ;
+int peermgtSendUserdata(struct s_peermgt *mgt, const struct s_msg *sendmsg, const struct s_nodeid *tonodeid, const int topeerid, const int topeerct);
 
 // Send user data to all connected peers. Return 1 if successful.
 int peermgtSendBroadcastUserdata(struct s_peermgt *mgt, const struct s_msg *sendmsg);
@@ -645,20 +647,20 @@ int peermgtSetPassword(struct s_peermgt *mgt, const char *password, const int pa
 // Initialize peer manager object.
 int peermgtInit(struct s_peermgt *mgt);
 // Return peer manager uptime in seconds.
-int peermgtUptime(struct s_peermgt *mgt) ;
+int peermgtUptime(struct s_peermgt *mgt);
 
 // Generate peer manager status report.
 void peermgtStatus(struct s_peermgt *mgt, char *report, const int report_len);
 
 // Create peer manager object.
 // @NOTE: i'm not going to clean resources during failed init because whole app will break down if something goes wrong
-int peermgtCreate(struct s_peermgt *mgt, const int peer_slots, const int auth_slots, struct s_nodekey *local_nodekey, struct s_dh_state *dhstate) ;
+int peermgtCreate(struct s_peermgt *mgt, const int peer_slots, const int auth_slots, struct s_nodekey *local_nodekey, struct s_dh_state *dhstate);
 
 // Destroy peer manager object.
 void peermgtDestroy(struct s_peermgt *mgt);
 
 // Return number of auth slots.
-int authmgtSlotCount(struct s_authmgt *mgt) ;
+int authmgtSlotCount(struct s_authmgt *mgt);
 
 // Return number of used auth slots.
 int authmgtUsedSlotCount(struct s_authmgt *mgt);

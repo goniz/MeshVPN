@@ -1,21 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2013 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_RSA_C
 #define F_RSA_C
@@ -54,7 +56,7 @@ int rsaGetDERSize(const struct s_rsa *rsa) {
 	}
 	else {
 		return 0;
-	}	
+	}
 }
 
 
@@ -75,7 +77,7 @@ int rsaGetDER(unsigned char *buf, const int buf_size, const struct s_rsa *rsa) {
 	}
 	else {
 		return 0;
-	}	
+	}
 }
 
 
@@ -86,7 +88,7 @@ int rsaGetFingerprint(unsigned char *buf, const int buf_size, const struct s_rsa
 	if(dersize > 0) {
 		return cryptoCalculateSHA256(buf, buf_size, derbuf, dersize);
 	}
-	else {				
+	else {
 		return 0;
 	}
 }
@@ -97,31 +99,31 @@ int rsaGetFingerprint(unsigned char *buf, const int buf_size, const struct s_rsa
  */
 int rsaImportKey(struct s_rsa * rsa, const char *keypath) {
     OpenSSL_add_all_algorithms();
-    
+
     BIO * in;
     RSA * rsakey;
-    
+
     rsa->key = EVP_PKEY_new();
     in = BIO_new_file(keypath, "r");
     if(in == NULL ) {
         debugf("failed to load private key from %s, is file accessable?", keypath);
         return 0;
     }
-    
+
     PEM_read_bio_PrivateKey(in, &rsa->key, 0, NULL);
-    
+
     BIO_free(in);
     rsakey = EVP_PKEY_get1_RSA(rsa->key);
-    
+
     if(RSA_check_key(rsakey) != 1) {
         debug("wrong status of loaded key, probably invalid");
         return 0;
     }
-    
+
     debugf("Private key successfully loaded from %s, ID: %d", keypath, EVP_PKEY_id(rsa->key));
     rsa->isvalid = 1;
     rsa->isprivate = 1;
-    
+
     return 1;
 }
 /**
@@ -130,43 +132,43 @@ int rsaImportKey(struct s_rsa * rsa, const char *keypath) {
  */
 int rsaGenerate(struct s_rsa *rsa, const int key_size) {
     debug("Generating RSA private/public key pair");
-    
+
 	RSA * rsakey;
 	rsa->isvalid = 0;
 	if(key_size <= 0) {
         debug("wrong RSA key size specified");
         return 0;
     }
-    
+
     rsakey = RSA_new();
     if(rsakey == NULL) {
         debug("failed to generate RSA key");
         return 0;
     }
-    
+
     if(!BN_set_word(rsa->bn, RSA_F4)) {
         debug("failed to initialize RSA");
         return 0;
     }
-    
+
     if(!RSA_generate_key_ex(rsakey, key_size, rsa->bn, NULL)) {
         debug("failed to generate RSA key");
         return 0;
     }
-    
+
     if(RSA_check_key(rsakey) != 1) {
         debug("generated RSA key verification failed");
         return 0;
     }
-    
+
     if(!EVP_PKEY_assign_RSA(rsa->key, rsakey)) {
         debug("failed to save RSA key");
         return 0;
     }
-    
+
     rsa->isvalid = 1;
     rsa->isprivate = 1;
-    
+
     return 1;
 }
 
@@ -175,13 +177,13 @@ int rsaGenerate(struct s_rsa *rsa, const int key_size) {
  */
 int rsaExportKey(struct s_rsa * rsa, const char * keypath) {
     BIO * out = BIO_new_file(keypath, "w");
-    
+
     if(!PEM_write_bio_PrivateKey(out, rsa->key, NULL, NULL, 0, NULL, NULL)) {
         debugf("BIO:failed to write %s", keypath);
         return 0;
     }
     BIO_free(out);
-    
+
     debugf("Exported RSA to %s", keypath);
     return 1;
 }
@@ -322,7 +324,7 @@ int rsaCreate(struct s_rsa *rsa) {
         BN_free(rsa->bn);
         return 0;
     }
-    
+
     BN_zero(rsa->bn);
     rsa->key = EVP_PKEY_new();
     if(rsa->key != NULL) {

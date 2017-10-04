@@ -1,21 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2014 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_MAPSTR_TEST_C
 #define F_MAPSTR_TEST_C
@@ -59,7 +61,7 @@ static int mapTestsuiteGenerateASCIIString(struct s_map *map, char *str, const i
 		if(nidarray == NULL) return 0;
 		h = mapTestsuiteGenerateASCIIStringRecursive(map, nidarray, map->rootid, 0, 0);
 		j = 0;
-		l = 0;		
+		l = 0;
 		while(j < h) {
 			k = 1 << (h-j);
 			if(l) {
@@ -240,7 +242,7 @@ static int mapTestsuiteRWDRem(struct s_map *map, unsigned char *keys, int *state
 		else {
 			return 0;
 		}
-	}	
+	}
 }
 
 
@@ -411,7 +413,7 @@ static int mapTestsuiteRWD(const int iterations, const int map_size, const int k
 	free(states);
 	free(values);
 	free(keys);
-	
+
 	return 1;
 }
 

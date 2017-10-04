@@ -1,21 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2014 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_CONSOLE_C
 #define F_CONSOLE_C
@@ -216,7 +218,7 @@ void consoleProcessLine(struct s_console *console) {
 				}
 				i++;
 			}
-			
+
 			// find function and arguments
 			if(line_args.len[0] > 0) {
 				cmd = consoleGetCommandN(console, line_args.arg[0], line_args.len[0]);
@@ -249,7 +251,7 @@ void consoleProcessLine(struct s_console *console) {
 						i++;
 					}
 					exec_args.count = cmd->fixed_args.count;
-					
+
 					// execute command
 					cmd->function(&exec_args);
 				}
@@ -302,7 +304,7 @@ int consoleWrite(struct s_console *console, const char *input, const int length)
 			}
 			else if(!ignore) {
 				if(c == ' ') {
-					if(escape) {	
+					if(escape) {
 						console->inbuf[(console->inbuf_count - 1)] = ' ';
 					}
 					else {
@@ -372,7 +374,7 @@ void consoleInit(struct s_console *console) {
 int consoleCreate(struct s_console *console, const int db_size, const int key_size, const int buffer_size) {
 	// check parameters
 	if(!((db_size > 0) && (key_size > 0) && (buffer_size > 0))) return 0;
-	
+
 	// create console
 	void *inmem = NULL;
 	void *outmem = NULL;
@@ -383,7 +385,7 @@ int consoleCreate(struct s_console *console, const int db_size, const int key_si
 	console->outbuf = outmem;
 	console->buffer_size = buffer_size;
 	consoleInit(console);
-	
+
 	return 1;
 }
 
@@ -448,7 +450,7 @@ void decodeConsole(char *cmd, int cmdlen) {
     int i, j;
     struct s_io_addrinfo new_peeraddrs;
     struct s_peeraddr new_peeraddr;
-    
+
     pa[0] = '\0';
     pb[0] = '\0';
     pc[0] = '\0';

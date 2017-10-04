@@ -1,21 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2015 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_PEERMGT_C
 #define F_PEERMGT_C
@@ -213,21 +215,21 @@ int peermgtConnect(struct s_peermgt *mgt, const struct s_peeraddr *remote_addr) 
         debug("failed to connect tot peer, remote_addr is NULL");
         return 0;
     }
-    
+
     if(peeraddrIsInternal(remote_addr) && !peermgtIsValidIndirectPeerAddr(mgt, remote_addr)) {
         debug("failed to connect to peer because remote_addr is internal or not valid");
         return 0;
     }
-    
+
 
     if(!authmgtStart(&mgt->authmgt, remote_addr)) {
         debug("failed to start AUTH connection");
         return 0;
     }
-    
+
     CREATE_HUMAN_IP(remote_addr);
     debugf("New connection initiated to %s", humanIp);
-    
+
     return 1;
 }
 
@@ -329,7 +331,7 @@ int peermgtSendPingToAddr(struct s_peermgt *mgt, const struct s_nodeid *tonodeid
 	if(!(outpeerid > 0)) {
 		return 0;
 	}
-	
+
 	cryptoRand(pingbuf, 64); // generate ping message
 	memcpy(mgt->rrmsg.msg, pingbuf, peermgt_PINGBUF_SIZE);
 	mgt->rrmsgpeerid = outpeerid;
@@ -337,7 +339,7 @@ int peermgtSendPingToAddr(struct s_peermgt *mgt, const struct s_nodeid *tonodeid
 	mgt->rrmsg.len = peermgt_PINGBUF_SIZE;
 	mgt->rrmsgusetargetaddr = 1;
 	mgt->rrmsgtargetaddr = *peeraddr;
-	
+
 	return 1;
 }
 
@@ -360,7 +362,7 @@ int peermgtGetNextPacketGen(struct s_peermgt *mgt, unsigned char *pbuf, const in
 	struct s_packet_data data;
 	struct s_nodeid *nodeid;
 	struct s_peeraddr *peeraddr;
-    
+
     CREATE_HUMAN_IP(target);
 
 	// send out user data
@@ -551,7 +553,7 @@ int peermgtGetNextPacketGen(struct s_peermgt *mgt, unsigned char *pbuf, const in
 			if(peerid < 0) { // node is not connected yet
 				if(peermgtConnect(mgt, peeraddr)) { // try to connect
                     debugf("Trying to connect with %s", humanIp);
-                    
+
 					j = nodedbGetDBID(&mgt->relaydb, nodeid, peermgt_NEWCONNECT_RELAY_MAX_LASTSEEN, -1, peermgt_NEWCONNECT_MIN_LASTCONNTRY);
 					if(!(j < 0)) {
 						peermgtConnect(mgt, nodedbGetNodeAddress(&mgt->relaydb, j)); // try to connect via relay
@@ -645,7 +647,7 @@ int peermgtDecodePacketAuth(struct s_peermgt *mgt, const struct s_packet_data *d
 	int dupid;
     char humanIp[60];
     peeraddrToHuman(humanIp, source_addr);
-    
+
 	int64_t remoteflags = 0;
 
     debugf("[%s] PeerID: %d AUTH message", humanIp, peerid);
@@ -653,7 +655,7 @@ int peermgtDecodePacketAuth(struct s_peermgt *mgt, const struct s_packet_data *d
         debugf("[%s] Wrong AUTH message", humanIp);
         return 0;
     }
-    
+
     if(authmgtGetAuthedPeerNodeID(authmgt, &peer_nodeid)) {
         dupid = peermgtGetID(mgt, &peer_nodeid);
         if(dupid < 0) {
@@ -663,7 +665,7 @@ int peermgtDecodePacketAuth(struct s_peermgt *mgt, const struct s_packet_data *d
         else {
             // Don't replace active existing session.
             peerid = -1;
-            
+
             // Upgrade indirect connection to a direct one
             if((peeraddrIsInternal(&mgt->data[dupid].remoteaddr)) && (!peeraddrIsInternal(source_addr))) {
                 mgt->data[dupid].remoteaddr = *source_addr;
@@ -686,7 +688,7 @@ int peermgtDecodePacketAuth(struct s_peermgt *mgt, const struct s_packet_data *d
             authmgtGetCompletedPeerAddress(authmgt, &mgt->data[peerid].remoteid, &mgt->data[peerid].remoteaddr);
             authmgtGetCompletedPeerSessionKeys(authmgt, &mgt->ctx[peerid]);
             authmgtGetCompletedPeerConnectionParams(authmgt, &mgt->data[peerid].remoteseq, &remoteflags);
-            
+
             mgt->data[peerid].remoteflags = remoteflags;
             mgt->data[peerid].state = peermgt_STATE_COMPLETE;
             mgt->data[peerid].lastrecv = tnow;
@@ -709,19 +711,19 @@ int peermgtDecodePacketPeerinfo(struct s_peermgt *mgt, const struct s_packet_dat
 	int relaypeerid;
 	int i;
 	int64_t r;
-    
+
     debug("PEERINFO packet received");
 	if(data->pl_length <= 4) {
         debugf("PEERINFO packet size is too small: %d bytes", data->pl_length);
         return 0;
     }
-    
+
     peerid = data->peerid;
     if(!peermgtIsActiveRemoteID(mgt, peerid)) {
         debugf("PeerID %d is not active, failed to proceed PEERINFO", peerid);
         return 0;
     }
-    
+
     peerinfo_max = ((data->pl_length - 4) / peerinfo_size);
     peerinfo_count = utilReadInt32(data->pl_buf);
     if(peerinfo_count > 0 && peerinfo_count <= peerinfo_max) {
@@ -742,7 +744,7 @@ int peermgtDecodePacketPeerinfo(struct s_peermgt *mgt, const struct s_packet_dat
         }
         return 1;
     }
-    
+
 	return 0;
 }
 
@@ -754,7 +756,7 @@ int peermgtDecodePacketPing(struct s_peermgt *mgt, const struct s_packet_data *d
         debug("wrong PEERPING packet");
         return 0;
     }
-    
+
     memcpy(mgt->rrmsg.msg, data->pl_buf, peermgt_PINGBUF_SIZE);
     mgt->rrmsgpeerid = data->peerid;
     mgt->rrmsgtype = packet_PLTYPE_PONG;
@@ -772,7 +774,7 @@ int peermgtDecodePacketPong(struct s_peermgt *mgt, const struct s_packet_data *d
         debugf("wrong size of PEERPONG packet, got %d bytes", data->pl_length);
         return 0;
     }
-    
+
     // content is not checked, any response is acceptable
     return 1;
 }
@@ -795,7 +797,7 @@ int peermgtDecodePacketRelayIn(struct s_peermgt *mgt, const struct s_packet_data
 			return 1;
 		}
 	}
-	
+
 	return 0;
 }
 
@@ -835,31 +837,31 @@ int peermgtDecodePacketRecursive(struct s_peermgt *mgt, const unsigned char *pac
 	struct s_packet_data data = { .pl_buf_size = peermgt_MSGSIZE_MAX, .pl_buf = mgt->msgbuf };
 	struct s_peeraddr indirect_addr;
 	struct s_nodeid peer_nodeid;
-    
+
     CREATE_HUMAN_IP(source_addr);
-    
+
 	ret = 0;
-    
+
 	if(packet_len <= (packet_PEERID_SIZE + packet_HMAC_SIZE) || (depth >= peermgt_DECODE_RECURSION_MAX_DEPTH)) {
         debugf("Wrong packets size (%d) or recursion depth (%d) from %s", packet_len, depth, humanIp);
         return 0;
     }
-    
+
     peerid = packetGetPeerID(packet);
-    
+
     // proceed inactive peers
     if(!peermgtIsActiveID(mgt, peerid)) {
         debugf("failed to proceed packet for inactive peerid: %d, IP: %s", peerid, humanIp);
         return 0;
     }
-    
+
     if(peerid == 0) {
         // packet has an anonymous PeerID
         if(!packetDecode(&data, packet, packet_len, &mgt->ctx[0], NULL)) {
             debugf("failed to decode packet from anonymous peer, IP: %s", humanIp);
             return 0;
         }
-        
+
         switch(data.pl_type) {
             case packet_PLTYPE_AUTH:
                 return peermgtDecodePacketAuth(mgt, &data, source_addr);
@@ -872,19 +874,19 @@ int peermgtDecodePacketRecursive(struct s_peermgt *mgt, const unsigned char *pac
         debugf("denied packet from invalid PeerID: %d", peerid);
         return 0;
     }
-    
+
     // packet has an active PeerID
     mgt->msgsize = 0;
     if(!packetDecode(&data, packet, packet_len, &mgt->ctx[peerid], &mgt->data[peerid].seq) > 0) {
         debugf("failed to decode packet from PeerID: %d, size: %d, IP: %s", peerid, packet_len, humanIp);
         return 0;
     }
-    
+
     if(!((data.pl_length > 0) && (data.pl_length < peermgt_MSGSIZE_MAX))) {
         debugf("bad packet from PeerID: %d", peerid);
         return 0;
     }
-    
+
     switch(data.pl_type) {
         case PACKET_PLTYPE_USERDATA:
             if(!peermgtGetFlag(mgt, peermgt_FLAG_USERDATA)) {
@@ -903,7 +905,7 @@ int peermgtDecodePacketRecursive(struct s_peermgt *mgt, const unsigned char *pac
                 mgt->msgsize = data.pl_length;
                 mgt->msgpeerid = data.peerid;
             }
-            
+
             break;
         case PACKET_PLTYPE_PEERINFO:
             ret = peermgtDecodePacketPeerinfo(mgt, &data);
@@ -933,11 +935,11 @@ int peermgtDecodePacketRecursive(struct s_peermgt *mgt, const unsigned char *pac
             return 0;
             break;
     }
-    
+
     if(ret <= 0) {
         return 0;
     }
-    
+
     if(mgt->data[peerid].lastrecv != tnow) { // Update NodeDB (maximum once per second).
         if(!peeraddrIsInternal(&mgt->data[peerid].remoteaddr)) { // do not pollute NodeDB with internal addresses
             if(peermgtGetNodeID(mgt, &peer_nodeid, peerid)) {
@@ -1078,7 +1080,7 @@ int peermgtInit(struct s_peermgt *mgt) {
 	authmgtReset(&mgt->authmgt);
 	nodedbInit(&mgt->nodedb);
 	nodedbInit(&mgt->relaydb);
-    
+
 	if(peermgtNew(mgt, local_nodeid, &empty_addr) == 0) { // ID 0 should always represent local NodeID
 		if(peermgtGetID(mgt, local_nodeid) == 0) {
 			if(peermgtSetNetID(mgt, defaultpw, 7) && peermgtSetPassword(mgt, defaultpw, 7)) {
@@ -1118,7 +1120,7 @@ void peermgtStatus(struct s_peermgt *mgt, char *report, const int report_len) {
 	int i = 0;
 
 	if(maxpos > report_len) { maxpos = report_len; }
-	
+
 	memcpy(&report[pos], "PeerID    NodeID                                                            Address                                       Status  LastPkt   SessAge   Flag  RQ", 158);
 	pos = pos + 158;
 	report[pos++] = '\n';
@@ -1175,23 +1177,23 @@ int peermgtCreate(struct s_peermgt *mgt, const int peer_slots, const int auth_sl
 	const char *defaultid = "default";
 	struct s_peermgt_data *data_mem;
 	struct s_crypto *ctx_mem;
-    
+
 	if(peer_slots <= 0 || auth_slots <= 0  || !peermgtSetNetID(mgt, defaultid, 7)) {
         debugf("Failed to create PeerMgr, peer_slots: %d, auth_slots: %d", peer_slots, auth_slots);
         return 0;
     }
-    
+
     data_mem = malloc(sizeof(struct s_peermgt_data) * (peer_slots + 1));
     if(data_mem == NULL) {
         debug("failed to allocate memory for s_peermgt_data");
         return 0;
     }
-    
+
     ctx_mem = malloc(sizeof(struct s_crypto) * (peer_slots + 1));
     if(ctx_mem == NULL) {
         debug("failed to allocate memory for s_crypto");
     }
-    
+
     if(!cryptoCreate(ctx_mem, (peer_slots + 1))) {
         debug("failed to create crypto engine");
         return 0;
@@ -1201,7 +1203,7 @@ int peermgtCreate(struct s_peermgt *mgt, const int peer_slots, const int auth_sl
         debug("failed to create defrag");
         return 0;
     }
-    
+
     if(!authmgtCreate(&mgt->authmgt, &mgt->netid, auth_slots, local_nodekey, dhstate)) {
         debug("failed to create authmgt");
         return 0;
@@ -1216,19 +1218,19 @@ int peermgtCreate(struct s_peermgt *mgt, const int peer_slots, const int auth_sl
         debug("failed to create NodeDB for peers");
         return 0;
     }
-    
+
     if(!mapCreate(&mgt->map, (peer_slots + 1), NODEID_SIZE, 1)) {
         debug("failed to create map");
         return 0;
     }
-    
-    
+
+
     mgt->nodekey = local_nodekey;
     mgt->data = data_mem;
     mgt->ctx = ctx_mem;
     mgt->rrmsg.msg = mgt->rrmsgbuf;
-    
-    
+
+
     return peermgtInit(mgt);
 }
 

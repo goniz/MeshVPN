@@ -1,21 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2015 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_IO_C
 #define F_IO_C
@@ -75,7 +77,7 @@ int ioResolveName(struct s_io_addrinfo *iai, const char *hostname, const char *p
 
 	ret = 0;
     debugf("Trying to resolve %s", hostname);
-    
+
 	if(hostname != NULL && port != NULL) {
 		memset(&hints,0,sizeof(struct addrinfo));
 
@@ -118,9 +120,9 @@ int ioResolveName(struct s_io_addrinfo *iai, const char *hostname, const char *p
 		}
 
 	}
-    
-    
-    
+
+
+
     debugf("Resolved total %d addresses", ret);
 	iai->count = ret;
 	return ret;
@@ -239,7 +241,7 @@ int ioOpenSocket(struct s_io_state *iostate, const int iotype, const char *binda
 	so = iostate->sockmark;
 	if(so > 0) {
 #if defined(SO_MARK)
-		if(setsockopt(fd, SOL_SOCKET, SO_MARK, (void *)&so, sizeof(int)) < 0) { 
+		if(setsockopt(fd, SOL_SOCKET, SO_MARK, (void *)&so, sizeof(int)) < 0) {
 			close(fd);
 			return -1;
 		}
@@ -678,7 +680,7 @@ int ioOpenTAP(struct s_io_state *iostate, char *tapname, const char *reqname) {
 	if((fcntl(STDIN_FILENO,F_SETFL,O_NONBLOCK)) < 0) {
 		return -1;
 	}
-	
+
 	if((id = ioAllocID(iostate)) < 0) {
 		return -1;
 	}
@@ -765,7 +767,7 @@ int ioOpenTAP(struct s_io_state *iostate, char *tapname, const char *reqname) {
 			if(WSAGetLastError() != WSA_IO_INCOMPLETE) {
 				handle->ovlr_used = 0;
 				ResetEvent(handle->ovlr.hEvent);
-			}				
+			}
 		}
 	}
 
@@ -808,7 +810,7 @@ int ioOpenTAP(struct s_io_state *iostate, char *tapname, const char *reqname) {
 		}
 	}
 	if(ovlw_used) {
-		if(WSAGetOverlappedResult(handle->fd, &handle->ovlw, &dwlen, TRUE, &flags) == TRUE) {	
+		if(WSAGetOverlappedResult(handle->fd, &handle->ovlw, &dwlen, TRUE, &flags) == TRUE) {
 			len = dwlen;
 		}
 		ResetEvent(handle->ovlw.hEvent);
@@ -1336,4 +1338,4 @@ void ioDestroy(struct s_io_state *iostate) {
 }
 
 
-#endif // F_IO_C 
+#endif // F_IO_C

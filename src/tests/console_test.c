@@ -1,21 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2015 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_CONSOLE_TEST_C
 #define F_CONSOLE_TEST_C
@@ -144,13 +146,13 @@ void consoleTestsuiteLoadNodeid(struct s_console *console, char *filename_priv, 
 	if(filename_priv == NULL) {
 		consoleMsg(console, "error: no filename for key specified");
 	}
-	else {	
+	else {
 			f_priv = fopen(filename_priv, "r");
 			if(f_priv != NULL) {
 				buf_priv = malloc(16384);
 				size_priv = fread(buf_priv, 1, 16384, f_priv);
 				if(size_priv > 0) {
-					if(consoleTestsuiteLoadNodeidHelper(&peeridf, buf_priv, size_priv, mode)) {	
+					if(consoleTestsuiteLoadNodeidHelper(&peeridf, buf_priv, size_priv, mode)) {
 						consoleMsg(console, "peerid loaded!"); consoleNL(console);
 						ksize = nodekeyGetDER(dercode, hexsize, &peeridf);
 						if(!(ksize > 0)) { consoleMsg(console, "failed."); consoleNL(console); }
@@ -195,14 +197,14 @@ void consoleTestsuiteLoadNodeid(struct s_console *console, char *filename_priv, 
 void consoleTestsuiteLoadPublicNodeid(struct s_console_args *args) {
 	struct s_console *console = args->arg[0];
 	char *filename_priv = args->arg[1];
-	consoleTestsuiteLoadNodeid(console, filename_priv, 1); 
+	consoleTestsuiteLoadNodeid(console, filename_priv, 1);
 }
 
 
 void consoleTestsuiteLoadPrivateNodeid(struct s_console_args *args) {
 	struct s_console *console = args->arg[0];
 	char *filename_priv = args->arg[1];
-	consoleTestsuiteLoadNodeid(console, filename_priv, 2); 
+	consoleTestsuiteLoadNodeid(console, filename_priv, 2);
 }
 
 
@@ -446,7 +448,7 @@ void consoleTestsuiteGet(struct s_console_args *args) {
 void consoleTestsuiteGetold(struct s_console_args *args) {
 	struct s_console *console = args->arg[0];
 	struct s_map *map = args->arg[1];
-	
+
 	char str[64];
 	int i = mapGetOldKeyID(map);
 	snprintf(str, 32, "%d", i);
@@ -530,16 +532,16 @@ void consoleTestsuiteIdspNextN(struct s_console_args *args) {
 void consoleTestsuiteKeygen(struct s_console_args *args) {
 	struct s_console *console = args->arg[0];
 	struct s_dh_state dhstate;
-	
+
 	struct s_nodeid peerid;
 	struct s_nodekey peeridf;
 	struct s_nodekey peeridf2;
-	
+
 	const int hexsize = 3072;
 	char hexcode[hexsize];
 	unsigned char dercode[hexsize];
 	int ksize;
-	
+
 	if(nodekeyCreate(&peeridf)) {
 		if(nodekeyCreate(&peeridf2)) {
 			if(nodekeyGenerate(&peeridf,2048)) {
@@ -580,7 +582,7 @@ void consoleTestsuiteKeygen(struct s_console_args *args) {
 	else {
 		consoleMsg(console, "peeridInit failed.");
 	}
-	
+
 	if(dhCreate(&dhstate)) {
 		dhGenKey(&dhstate);
 		consoleMsg(console, "dh pubkey generated.");
@@ -600,24 +602,24 @@ void consoleTestsuiteKeygen(struct s_console_args *args) {
 	else {
 		consoleMsg(console, "dhInit failed.");
 	}
-	
+
 	consoleNL(console);
 }
 
 
 void consoleTestsuiteMassKeygen(struct s_console_args *args) {
-	struct s_console *console = args->arg[0];	
+	struct s_console *console = args->arg[0];
 	char *loopcount_str = args->arg[1];
 	struct s_nodekey nodekey_a;
 	struct s_nodekey nodekey_b;
-	
+
 	const int hexsize = 1024;
 	char hexcode[hexsize];
 	unsigned char dercode[rsa_MAXSIZE];
 	int ksize;
 	int loopcount;
 	int i;
-	
+
 	if(loopcount_str != NULL) {
 		sscanf(loopcount_str, "%d", &loopcount);
 		if(nodekeyCreate(&nodekey_a)) {
@@ -625,14 +627,14 @@ void consoleTestsuiteMassKeygen(struct s_console_args *args) {
 				for(i=0; i<loopcount; i++) {
 					if(nodekeyGenerate(&nodekey_a,1024)) {
 						ksize = nodekeyGetDER(dercode, rsa_MAXSIZE, &nodekey_a);
-						if(!(ksize > 0)) { 
+						if(!(ksize > 0)) {
 							consoleMsg(console, "nodekeyGetDER failed.");
 							break;
 						}
-						if(!nodekeyLoadDER(&nodekey_b, dercode, ksize)) { 
+						if(!nodekeyLoadDER(&nodekey_b, dercode, ksize)) {
 							consoleMsg(console, "nodekeyLoadDER failed.");
 							break;
-						}				
+						}
 						if(memcmp(nodekey_a.nodeid.id, nodekey_b.nodeid.id, nodeid_SIZE) != 0) {
 							consoleMsg(console, "failed.");
 							break;
@@ -669,9 +671,9 @@ void consoleTestsuiteAuthtestZ(struct s_console *console, struct s_auth_state *u
 	struct s_nodeid nid_local = {{0}};
 	struct s_nodeid nid_remote = {{0}};
 	int pid;
-	
+
 	char text[2048];
-	
+
 	if(authIsCompleted(user_a)) {
 		consoleMsg(console, "authentication successful!"); consoleNL(console);
 		consoleMsg(console, "  authid_local  = ");
@@ -732,7 +734,7 @@ void consoleTestsuiteAuthtestY(struct s_console *console, struct s_auth_state *u
 void consoleTestsuiteAuthtestX(struct s_console *console, struct s_auth_state *user_a, struct s_auth_state *user_b) {
 	consoleMsg(console, "sending messages:"); consoleNL(console);
 	authStart(user_a);
-	authReset(user_b);	
+	authReset(user_b);
 	consoleTestsuiteAuthtestY(console, user_a, user_b,  0);
 	consoleTestsuiteAuthtestY(console, user_a, user_b,  1);
 	consoleTestsuiteAuthtestY(console, user_a, user_b, -1);
@@ -776,7 +778,7 @@ void consoleTestsuiteAuthtest(struct s_console_args *args) {
 	struct s_auth_state user_b;
 	struct s_netid netid_a;
 	struct s_netid netid_b;
-	
+
 	const char *netid_str_a = "test";
 	const char *netid_str_b = "test";
 
@@ -938,7 +940,7 @@ int consoleTestsuite() {
 	consoleRegisterCommand(&console, "endian", &consoleTestsuiteEndian, consoleArgs1(&console));
 	consoleRegisterCommand(&console, "ctrinc", &consoleTestsuiteCtrInc, consoleArgs2(&console, &testctr));
 	consoleRegisterCommand(&console, "ctrshow", &consoleTestsuiteCtrShow, consoleArgs2(&console, &testctr));
-	
+
 	while(run) {
 		while((len = consoleRead(&console, buf, rw_bufsize)) > 0) {
 			if(!(fwrite(buf, 1, len, stdout) > 0)) return 0;
@@ -947,11 +949,11 @@ int consoleTestsuite() {
 			consoleWrite(&console, buf, len);
 		}
 	}
-	
+
 	consoleDestroy(&console);
-	
+
 	mapDestroy(&testmap);
-	
+
 	return 1;
 }
 

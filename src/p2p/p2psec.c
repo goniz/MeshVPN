@@ -1,21 +1,23 @@
-/***************************************************************************
- *   Copyright (C) 2016 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_P2PSEC_C
 #define F_P2PSEC_C
@@ -36,11 +38,11 @@ int p2psecStart(struct s_p2psec *p2psec) {
 	if (!((!p2psec->started) && (p2psec->key_loaded) && (p2psec->dh_loaded))) {
 		return 0;
 	}
-    
+
 	if(!(peermgtCreate(&p2psec->mgt, p2psec->peer_count, p2psec->auth_count, &p2psec->nk, &p2psec->dh))) {
 		return 0;
 	}
-    
+
 	peermgtSetLoopback(&p2psec->mgt, p2psec->loopback_enable);
 	peermgtSetFastauth(&p2psec->mgt, p2psec->fastauth_enable);
 	peermgtSetFragmentation(&p2psec->mgt, p2psec->fragmentation_enable);
@@ -48,7 +50,7 @@ int p2psecStart(struct s_p2psec *p2psec) {
 	peermgtSetPassword(&p2psec->mgt, p2psec->password, p2psec->password_len);
 	peermgtSetFlags(&p2psec->mgt, p2psec->flags);
 	p2psec->started = 1;
-	
+
 	return 1;
 }
 
@@ -79,27 +81,27 @@ int p2psecInitPrivateKey(struct s_p2psec *p2psec, const int bits, const char *ke
     if(strlen(keypath) > 0) {
         debugf("Initialize  encryption keys, save path is %s", keypath);
     }
-    
+
     if(access(keypath, F_OK) == 0) {
         debug("PEM file found. Loading it.");
         if(p2psecImportPrivkey(p2psec, keypath)) {
             msgf("PEM file successfully loaded: %s", keypath);
             return 1;
         }
-        
+
         debugf("Failed to import key from %s, will be regenerated", keypath);
     }
-    
+
     if(!p2psecGeneratePrivkey(p2psec, bits)) {
         debug("failed to generate private key");
         return 0;
     }
-    
+
     if(!p2psecExportPrivkey(p2psec, keypath)){
         debugf("Failed to export private key to %s", keypath);
         return 0;
     }
-    
+
     return 1;
 }
 
@@ -108,12 +110,12 @@ int p2psecImportPrivkey(struct s_p2psec * p2psec, const char * keypath) {
         debug("failed to initialize node key");
         return 0;
     }
-    
+
     if(!nodekeyImport(&p2psec->nk, keypath)) {
         debug("PEM key import failed");
         return 0;
     }
-    
+
     p2psec->key_loaded = 1;
     return 1;
 }
@@ -125,12 +127,12 @@ int p2psecExportPrivkey(struct s_p2psec * p2psec, const char * keypath) {
         debug("unable to save key because it's not loaded!");
         return 0;
     }
-    
+
     if(!nodekeyExport(&p2psec->nk, keypath)) {
         debug("failed to export RSA key");
         return 0;
     }
-    
+
     debug("Encryption key successfully exported");
     return 1;
 }
@@ -140,7 +142,7 @@ int p2psecExportPrivkey(struct s_p2psec * p2psec, const char * keypath) {
  */
 int p2psecGeneratePrivkey(struct s_p2psec *p2psec, const int bits) {
 	if(p2psec->key_loaded) nodekeyDestroy(&p2psec->nk);
-    
+
 	if(bits >= 1024 && bits <= 3072) {
 		if(nodekeyCreate(&p2psec->nk)) {
 			if(nodekeyGenerate(&p2psec->nk, bits)) {
@@ -167,7 +169,7 @@ int p2psecLoadDH(struct s_p2psec *p2psec) {
 
 void p2psecSetMaxConnectedPeers(struct s_p2psec *p2psec, const int peer_count) {
 	if(peer_count > 0) p2psec->peer_count = peer_count;
-	
+
 }
 
 
@@ -193,7 +195,7 @@ void p2psecSetNetname(struct s_p2psec *p2psec, const char *netname, const int ne
 		memcpy(p2psec->netname, "default", 7);
 		p2psec->netname_len = 7;
 	}
-    
+
     debugf("Network name update to %s", p2psec->netname);
 	if(p2psec->started) peermgtSetNetID(&p2psec->mgt, p2psec->netname, p2psec->netname_len);
 }
@@ -201,7 +203,7 @@ void p2psecSetNetname(struct s_p2psec *p2psec, const char *netname, const int ne
 
 void p2psecSetPassword(struct s_p2psec *p2psec, const char *password, const int password_len) {
     int len = (password_len < 1024) ? password_len : 1023;
-    
+
 	memset(p2psec->password, 0, 1024);
 	if(len > 0) {
 		memcpy(p2psec->password, password, len);
@@ -359,12 +361,12 @@ unsigned char *p2psecRecvMSG(struct s_p2psec *p2psec, unsigned char *source_node
 	struct s_msg msg;
 	struct s_nodeid nodeid;
     char nodeIdHuman[NODEID_SIZE + 1];
-    
+
 	if(peermgtRecvUserdata(&p2psec->mgt, &msg, &nodeid, NULL, NULL)) {
 		*message_len = msg.len;
 		if(source_nodeid != NULL) memcpy(source_nodeid, nodeid.id, NODEID_SIZE);
         nodeidExtract(nodeIdHuman, &nodeid);
-        
+
         debugf("[%s] Recieved MSG", nodeIdHuman);
 
 		return msg.msg;

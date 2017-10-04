@@ -1,3 +1,24 @@
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef H_ETHERNET
 #define H_ETHERNET
 
@@ -6,7 +27,7 @@
 
 // The checksum structure.
 struct s_checksum {
-    uint32_t checksum;
+        uint32_t checksum;
 };
 
 
@@ -28,8 +49,8 @@ struct s_checksum {
 
 // The virtual service structure.
 struct s_virtserv_state {
-    struct s_map listenaddrs;
-    unsigned char mac[virtserv_MAC_SIZE];
+        struct s_map listenaddrs;
+        unsigned char mac[virtserv_MAC_SIZE];
 };
 
 
@@ -55,12 +76,12 @@ struct s_virtserv_state {
 
 // Switchstate structures.
 struct s_switch_mactable_entry {
-    int portid;
-    int portts;
-    int ents;
+        int portid;
+        int portts;
+        int ents;
 };
 struct s_switch_state {
-    struct s_map mactable;
+        struct s_map mactable;
 };
 
 
@@ -83,14 +104,14 @@ struct s_switch_state {
 
 // NDP6 structures.
 struct s_ndp6_ndptable_entry {
-    unsigned char mac[ndp6_MAC_SIZE];
-    int portid;
-    int portts;
-    int ents;
+        unsigned char mac[ndp6_MAC_SIZE];
+        int portid;
+        int portts;
+        int ents;
 };
 
 struct s_ndp6_state {
-    struct s_map ndptable;
+        struct s_map ndptable;
 };
 
 // Zeroes the checksum.
