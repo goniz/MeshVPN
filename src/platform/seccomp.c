@@ -22,12 +22,13 @@
 #ifndef F_SECCOMP_C
 #define F_SECCOMP_C
 
+#include "logging.h"
 
 #ifdef HAVE_LIBSECCOMP
 
 #include <seccomp.h>
 #include "platform.h"
-#include "logging.h"
+
 #include <signal.h>
 #include <errno.h>
 #include <stdio.h>

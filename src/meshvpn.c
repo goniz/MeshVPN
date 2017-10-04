@@ -36,6 +36,8 @@
 
 struct s_p2psec * g_p2psec = NULL;
 
+int show_usage(void);
+
 // commandline parser
 int main(int argc, char **argv) {
         int confok;
@@ -105,8 +107,25 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
-int show_usage() {
-        printf("%s %s", PACKAGE_STRING, TARGET_ALIAS);
+int show_usage(void) {
+        const char title[] =
+                PACKAGE_STRING " " TARGET_ALIAS
+#ifdef HAVE_LIBSECCOMP
+                " [SECCOMP]"
+#endif
+#ifdef HAVE_LIBCRYPTO
+                " [CRYPTO]"
+#endif
+#ifdef HAVE_LIBSSL
+                " [SSL]"
+#endif
+#ifdef HAVE_LIBZ
+                " [ZLIB]"
+#endif
+                " built on " __DATE__
+        ;
+
+        printf("%s\n\n", title);
 	printf("Usage: meshvpn <configfile>\n");
 	return 2;
 }

@@ -522,6 +522,7 @@ int authGenS5(struct s_auth_state *authstate) {
     authstate->nextmsg_size = 4 + 2 + 4;
 
     debugf("S5 message successfully generated, size %d, state: %d", authstate->nextmsg_size, msgnum);
+    return 0;
 }
 
 // Generate auth message

@@ -857,7 +857,7 @@ int peermgtDecodePacketRecursive(struct s_peermgt *mgt, const unsigned char *pac
 
     if(peerid == 0) {
         // packet has an anonymous PeerID
-        if(!packetDecode(&data, packet, packet_len, &mgt->ctx[0], NULL)) {
+        if(packetDecode(&data, packet, packet_len, &mgt->ctx[0], NULL) <= 0) {
             debugf("failed to decode packet from anonymous peer, IP: %s", humanIp);
             return 0;
         }
@@ -877,7 +877,7 @@ int peermgtDecodePacketRecursive(struct s_peermgt *mgt, const unsigned char *pac
 
     // packet has an active PeerID
     mgt->msgsize = 0;
-    if(!packetDecode(&data, packet, packet_len, &mgt->ctx[peerid], &mgt->data[peerid].seq) > 0) {
+    if(packetDecode(&data, packet, packet_len, &mgt->ctx[peerid], &mgt->data[peerid].seq) <= 0) {
         debugf("failed to decode packet from PeerID: %d, size: %d, IP: %s", peerid, packet_len, humanIp);
         return 0;
     }

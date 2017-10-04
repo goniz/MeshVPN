@@ -26,6 +26,7 @@
 #include "io.h"
 #include "app.h"
 #include "p2p.h"
+#include "platform.h"
 
 #include <string.h>
 #include <signal.h>

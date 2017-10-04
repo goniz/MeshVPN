@@ -20,6 +20,7 @@
  */
 
 #include "platform.h"
+#include "app.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

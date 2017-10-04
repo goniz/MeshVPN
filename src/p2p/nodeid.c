@@ -26,7 +26,7 @@
 #include "rsa.h"
 #include "nodeid.h"
 
-int nodeidExtract(char * buffer, struct s_nodeid * node) {
+void nodeidExtract(char * buffer, struct s_nodeid * node) {
     memcpy(buffer, node->id, NODEID_SIZE);
     buffer[NODEID_SIZE] = '\0';
 }

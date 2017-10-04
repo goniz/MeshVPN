@@ -95,4 +95,16 @@ int rsaCreate(struct s_rsa *rsa);
 // Destroy a RSA object.
 void rsaDestroy(struct s_rsa *rsa);
 
+// Returns 1 if RSA structure contains a valid public key
+int rsaIsValid(const struct s_rsa *rsa);
+
+// Returns 1 if RSA structure contains a private key
+int rsaIsPrivate(const struct s_rsa *rsa);
+
+// Get size of DER encoded public key.
+int rsaGetDERSize(const struct s_rsa *rsa);
+
+// Get DER encoded public key. Returns length if successful.
+int rsaGetDER(unsigned char *buf, const int buf_size, const struct s_rsa *rsa);
+
 #endif // H_RSA

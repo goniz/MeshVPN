@@ -46,7 +46,7 @@ struct s_nodekey {
         struct s_rsa key;
 };
 
-int nodeidExtract(char * buffer, struct s_nodeid * node);
+void nodeidExtract(char * buffer, struct s_nodeid * node);
 
 // Create a NodeKey object.
 int nodekeyCreate(struct s_nodekey *nodekey);

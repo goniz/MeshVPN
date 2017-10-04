@@ -51,7 +51,7 @@ void msg(char * msg) {
 
 	if(logging_mode == LOGGING_NONE) {
         time_t t = time(NULL);
-      	printf("[%d] %s\n", t, msg);
+      	printf("[%ld] %s\n", t, msg);
 	} else if(logging_mode == LOGGING_SYSLOG) {
 		syslog(LOG_INFO, "%s", msg);
 	}

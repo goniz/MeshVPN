@@ -251,4 +251,7 @@ void ioReset(struct s_io_state *iostate);
 // Create IO state structure. Returns 1 on success.
 int ioCreate(struct s_io_state *iostate, const int io_bufsize, const int io_max);
 
+// Destroy IO state structure.
+void ioDestroy(struct s_io_state *iostate);
+
 #endif
