@@ -1,0 +1,27 @@
+# Changelog
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
+and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+- You will find unreleased changes on Github source see:
+  https://github.com/Kuebler-IT/MeshVPN/compare/v1.0.0-alpha.1...HEAD
+- Open and unreleased merge requests can be find here:
+  https://github.com/Kuebler-IT/MeshVPN/pulls
+- Open issues can find also in Github:
+  https://github.com/Kuebler-IT/MeshVPN/issues?q=is%3Aopen+is%3Aissue
+
+## [1.0.0-alpha.1] - 2017-10-04
+### Added
+- Initial fork from PeerVPN 0.44
+- Merged changes from Hideman Ltd. https://github.com/Kuebler-IT/MeshVPN/pull/1
+- Add missing files for GNU GPL standard
+
+### Changed
+- build process changed to autotools instead of single Makefile.
+
+### Removed
+- Removed packaging files for rpm and so on.
+
+[Unreleased]: https://github.com/Kuebler-IT/MeshVPN/compare/v1.0.0-alpha.1...HEAD
