@@ -1,55 +1,35 @@
-/***************************************************************************
- *   Copyright (C) 2014 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_VIRTSERV_C
 #define F_VIRTSERV_C
 
 
-#include "../libp2psec/map.c"
-#include "ndp6.c"
+#include "ethernet.h"
+#include "p2p.h"
 
-
-// Constants.
-#define virtserv_LISTENADDR_COUNT 8
-#define virtserv_ADDR_SIZE 16
-#define virtserv_MAC_SIZE 6
-#define virtserv_MAC "\x00\x22\x00\xed\x13\x37"
-
-
-// Constraints.
-#if virtserv_ADDR_SIZE != 16
-#error virtserv_ADDR_SIZE != 16
-#endif
-#if virtserv_MAC_SIZE != 6
-#error virtserv_MAC_SIZE != 6
-#endif
-
-
-// The virtual service structure.
-struct s_virtserv_state {
-	struct s_map listenaddrs;
-	unsigned char mac[virtserv_MAC_SIZE];
-};
 
 
 // Add address to virtual service
-static int virtservAddAddress(struct s_virtserv_state *virtserv, const unsigned char *ipv6address) {
+int virtservAddAddress(struct s_virtserv_state *virtserv, const unsigned char *ipv6address) {
 	int tnow;
 	tnow = utilGetClock();
 	return mapAdd(&virtserv->listenaddrs, ipv6address, &tnow);
@@ -57,19 +37,19 @@ static int virtservAddAddress(struct s_virtserv_state *virtserv, const unsigned 
 
 
 // Returns 1 if mac address is the mac address of the virtual service.
-static int virtservCheckMac(struct s_virtserv_state *virtserv, const unsigned char *macaddress) {
+int virtservCheckMac(struct s_virtserv_state *virtserv, const unsigned char *macaddress) {
 	return (memcmp(virtserv->mac, macaddress, virtserv_MAC_SIZE) == 0);
 }
 
 
 // Returns 1 if address is a listen address of the virtual service.
-static int virtservCheckAddress(struct s_virtserv_state *virtserv, const unsigned char *ipv6address) {
+int virtservCheckAddress(struct s_virtserv_state *virtserv, const unsigned char *ipv6address) {
 	return (mapGet(&virtserv->listenaddrs, ipv6address) != NULL);
 }
 
 
 // Decode Echo message.
-static int virtservDecodeEcho(struct s_virtserv_state *virtserv, unsigned char *outbuf, const int outbuf_len, const unsigned char *inbuf, const int inbuf_len) {
+int virtservDecodeEcho(struct s_virtserv_state *virtserv, unsigned char *outbuf, const int outbuf_len, const unsigned char *inbuf, const int inbuf_len) {
 	if(inbuf_len <= outbuf_len) {
 		memcpy(outbuf, inbuf, inbuf_len);
 		return inbuf_len;
@@ -79,7 +59,7 @@ static int virtservDecodeEcho(struct s_virtserv_state *virtserv, unsigned char *
 
 
 // Decode UDP message.
-static int virtservDecodeUDPv6(struct s_virtserv_state *virtserv, unsigned char *outbuf, const int outbuf_len, const unsigned char *inbuf, const int inbuf_len) {
+int virtservDecodeUDPv6(struct s_virtserv_state *virtserv, unsigned char *outbuf, const int outbuf_len, const unsigned char *inbuf, const int inbuf_len) {
 	int portnumber;
 	int payload_len;
 	if(inbuf_len >= 8) {
@@ -106,7 +86,7 @@ static int virtservDecodeUDPv6(struct s_virtserv_state *virtserv, unsigned char 
 
 
 // Decode ICMPv6 message.
-static int virtservDecodeICMPv6(struct s_virtserv_state *virtserv, unsigned char *outbuf, const int outbuf_len, const unsigned char *inbuf, const int inbuf_len) {
+int virtservDecodeICMPv6(struct s_virtserv_state *virtserv, unsigned char *outbuf, const int outbuf_len, const unsigned char *inbuf, const int inbuf_len) {
 	if((inbuf_len >= 8) && (outbuf_len >= (inbuf_len + 4))) { // 4 extra bytes are needed for the padding zeroes
 		if((inbuf[0] == 0x80) && (inbuf[1] == 0x00)) { // Echo Request
 			outbuf[0] = 0x81; // Echo Reply
@@ -122,7 +102,7 @@ static int virtservDecodeICMPv6(struct s_virtserv_state *virtserv, unsigned char
 
 
 // Decode frame for virtual service. Returns length of the response.
-static int virtservDecodeFrame(struct s_virtserv_state *virtserv, unsigned char *outframe, const int outframe_len, const unsigned char *inframe, const int inframe_len) {
+int virtservDecodeFrame(struct s_virtserv_state *virtserv, unsigned char *outframe, const int outframe_len, const unsigned char *inframe, const int inframe_len) {
 	struct s_checksum checksum;
 	uint16_t u;
 	int i;
@@ -166,7 +146,7 @@ static int virtservDecodeFrame(struct s_virtserv_state *virtserv, unsigned char 
 
 
 // Send frame to the virtual service. Returns length of the response.
-static int virtservFrame(struct s_virtserv_state *virtserv, unsigned char *outframe, const int outframe_len, const unsigned char *inframe, const int inframe_len) {
+int virtservFrame(struct s_virtserv_state *virtserv, unsigned char *outframe, const int outframe_len, const unsigned char *inframe, const int inframe_len) {
 	const unsigned char *src_ipv6addr;
 	const unsigned char *src_macaddr;
 	const unsigned char *dest_ipv6addr;
@@ -220,7 +200,7 @@ static int virtservFrame(struct s_virtserv_state *virtserv, unsigned char *outfr
 
 
 // Create virtual service.
-static int virtservCreate(struct s_virtserv_state *virtserv) {
+int virtservCreate(struct s_virtserv_state *virtserv) {
 	unsigned char mymacaddr[virtserv_MAC_SIZE];
 	unsigned char myipv6addr[virtserv_ADDR_SIZE];
 
@@ -246,7 +226,7 @@ static int virtservCreate(struct s_virtserv_state *virtserv) {
 
 
 // Destroy virtual service.
-static void virtservDestroy(struct s_virtserv_state *virtserv) {
+void virtservDestroy(struct s_virtserv_state *virtserv) {
 	mapDestroy(&virtserv->listenaddrs);
 }
 

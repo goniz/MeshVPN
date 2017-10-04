@@ -19,31 +19,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef F_CHECKSUM_C
-#define F_CHECKSUM_C
+#ifndef H_LOGGING
+#define H_LOGGING
 
-#include "ethernet.h"
+#include <stdarg.h>
 
-// Zeroes the checksum.
-void checksumZero(struct s_checksum *cs) {
-	cs->checksum = 0;
-}
+#define LOGGING_NONE 0
+#define LOGGGIN_FILE 1
+#define LOGGING_SYSLOG 2
 
+int loggerSetMode(int);
 
-// Adds 16 bit to the checksum.
-void checksumAdd(struct s_checksum *cs, const uint16_t x) {
-	cs->checksum += x;
-}
+void msg(char *);
 
+void msgf(char *,...);
 
-// Get checksum
-uint16_t checksumGet(struct s_checksum *cs) {
-	uint16_t ret;
-	cs->checksum = ((cs->checksum & 0xFFFF) + (cs->checksum >> 16));
-	cs->checksum = ((cs->checksum & 0xFFFF) + (cs->checksum >> 16));
-	ret = ~(cs->checksum);
-	return ret;
-}
+void debugMsg(const char *format,const char *file,const int line, ...);
 
+#ifdef DEBUG
+	#define debug(format) debugMsg(format, __FILE__, __LINE__)
+				#define debugf(format, ...) debugMsg(format, __FILE__, __LINE__, __VA_ARGS__)
 
-#endif // F_CHECKSUM_C
+#else
+	#define debug(format)
+				#define debugf(format, ...)
+#endif /** DEBUG BLOCK */
+
+#endif /** HEADER GUARD */

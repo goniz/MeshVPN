@@ -19,31 +19,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef F_CHECKSUM_C
-#define F_CHECKSUM_C
+#ifndef F_NETID_C
+#define F_NETID_C
 
-#include "ethernet.h"
+#include "p2p.h"
+#include "crypto.h"
 
-// Zeroes the checksum.
-void checksumZero(struct s_checksum *cs) {
-	cs->checksum = 0;
+int netidSet(struct s_netid *netid, const char *netname, const int netname_len) {
+	memset(netid->id, 0, netid_SIZE);
+	return cryptoCalculateSHA256(netid->id, netid_SIZE, (unsigned char *)netname, netname_len);
 }
 
 
-// Adds 16 bit to the checksum.
-void checksumAdd(struct s_checksum *cs, const uint16_t x) {
-	cs->checksum += x;
-}
-
-
-// Get checksum
-uint16_t checksumGet(struct s_checksum *cs) {
-	uint16_t ret;
-	cs->checksum = ((cs->checksum & 0xFFFF) + (cs->checksum >> 16));
-	cs->checksum = ((cs->checksum & 0xFFFF) + (cs->checksum >> 16));
-	ret = ~(cs->checksum);
-	return ret;
-}
-
-
-#endif // F_CHECKSUM_C
+#endif // F_NETID_C

@@ -1,30 +1,37 @@
-/***************************************************************************
- *   Copyright (C) 2014 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_SECCOMP_C
 #define F_SECCOMP_C
 
+#include "logging.h"
 
-#ifdef SECCOMP_ENABLE
-
+#ifdef HAVE_LIBSECCOMP
 
 #include <seccomp.h>
+#include "platform.h"
+
+#include <signal.h>
+#include <errno.h>
+#include <stdio.h>
 
 
 // Defines and loads seccomp filter. Returns 1 on success.
@@ -63,25 +70,25 @@ static int seccompEnableDo(scmp_filter_ctx ctx) {
 
 
 // Enables seccomp filtering. Returns 1 on success.
-static int seccompEnable() {
+int seccompEnable() {
 	int enabled;
 	scmp_filter_ctx filter;
 	filter = seccomp_init(SCMP_ACT_KILL);
-	if(filter != NULL) {
-		enabled = seccompEnableDo(filter);
-		seccomp_release(filter);
-		return enabled;
+	if(filter == NULL) {
+		return 0;
 	}
-	return 0;
+
+	enabled = seccompEnableDo(filter);
+	seccomp_release(filter);
+	return enabled;
 }
-
-
 
 #else
 
 
 // No seccomp support.
-static int seccompEnable() {
+int seccompEnable() {
+	msg("Seccomp support is not enable. Use SECCOMP_ENABLE during build");
 	return 0;
 }
 
@@ -89,4 +96,4 @@ static int seccompEnable() {
 #endif
 
 
-#endif // F_SECCOMP_C 
+#endif // F_SECCOMP_C

@@ -19,31 +19,53 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef F_CHECKSUM_C
-#define F_CHECKSUM_C
-
-#include "ethernet.h"
-
-// Zeroes the checksum.
-void checksumZero(struct s_checksum *cs) {
-	cs->checksum = 0;
-}
+#ifndef H_IDSP
+#define H_IDSP
 
 
-// Adds 16 bit to the checksum.
-void checksumAdd(struct s_checksum *cs, const uint16_t x) {
-	cs->checksum += x;
-}
+
+#define idsp_ALIGN_BOUNDARY 16
+
+// The MSG structure.
+struct s_msg {
+        unsigned char *msg;
+        int len;
+};
+
+struct s_idsp {
+        int *idfwd;
+        int *idlist;
+        int count;
+        int used;
+        int iter;
+};
 
 
-// Get checksum
-uint16_t checksumGet(struct s_checksum *cs) {
-	uint16_t ret;
-	cs->checksum = ((cs->checksum & 0xFFFF) + (cs->checksum >> 16));
-	cs->checksum = ((cs->checksum & 0xFFFF) + (cs->checksum >> 16));
-	ret = ~(cs->checksum);
-	return ret;
-}
 
+void idspReset(struct s_idsp *idsp);
 
-#endif // F_CHECKSUM_C
+int idspMemSize(const int size);
+
+int idspMemInit(struct s_idsp *idsp, const int mem_size, const int size);
+
+int idspCreate(struct s_idsp *idsp, const int size);
+
+int idspNextN(struct s_idsp *idsp, const int start);
+
+int idspNext(struct s_idsp *idsp);
+
+int idspNew(struct s_idsp *idsp);
+
+int idspGetPos(struct s_idsp *idsp, const int id);
+
+void idspDelete(struct s_idsp *idsp, const int id);
+
+int idspIsValid(struct s_idsp *idsp, const int id);
+
+int idspUsedCount(struct s_idsp *idsp);
+
+int idspSize(struct s_idsp *idsp);
+
+void idspDestroy(struct s_idsp *idsp);
+
+#endif

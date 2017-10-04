@@ -19,31 +19,47 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef F_CHECKSUM_C
-#define F_CHECKSUM_C
+#ifndef H_GLOBALS
+#define H_GLOBALS
 
+#include "io.h"
+#include "p2p.h"
 #include "ethernet.h"
 
-// Zeroes the checksum.
-void checksumZero(struct s_checksum *cs) {
-	cs->checksum = 0;
-}
+// compile time options & timing parameters
+#define INITPEER_STORAGE 1024
 
 
-// Adds 16 bit to the checksum.
-void checksumAdd(struct s_checksum *cs, const uint16_t x) {
-	cs->checksum += x;
-}
+// config parser options
+#define CONFPARSER_LINEBUF_SIZE 4096
+#define CONFPARSER_NAMEBUF_SIZE 512
 
+// encryption options
+#define ENCRYPTION_ASYM
 
-// Get checksum
-uint16_t checksumGet(struct s_checksum *cs) {
-	uint16_t ret;
-	cs->checksum = ((cs->checksum & 0xFFFF) + (cs->checksum >> 16));
-	cs->checksum = ((cs->checksum & 0xFFFF) + (cs->checksum >> 16));
-	ret = ~(cs->checksum);
-	return ret;
-}
+// iogrps
+#define IOGRP_DEFAULT 0
+#define IOGRP_SOCKET 1
+#define IOGRP_TAP 2
+#define IOGRP_CONSOLE 3
 
+struct s_initpeers {
+        struct s_io_addr * addresses;
+        int count;
+};
+// global variables
+struct s_io_state iostate;
+struct s_p2psec * g_p2psec;
+int g_mainloop;
 
-#endif // F_CHECKSUM_C
+struct s_switch_state g_switchstate;
+struct s_ndp6_state g_ndpstate;
+struct s_virtserv_state g_virtserv;
+
+int g_enableconsole;
+int g_enableeth;
+int g_enablendpcache;
+int g_enablevirtserv;
+int g_enableengines;
+
+#endif

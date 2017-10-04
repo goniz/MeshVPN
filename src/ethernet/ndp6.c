@@ -1,61 +1,38 @@
-/***************************************************************************
- *   Copyright (C) 2014 by Tobias Volk                                     *
- *   mail@tobiasvolk.de                                                    *
- *                                                                         *
- *   This program is free software: you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation, either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
- *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- ***************************************************************************/
-
+/*
+ * MeshVPN - A open source peer-to-peer VPN (forked from PeerVPN)
+ *
+ * Copyright (C) 2012-2016  Tobias Volk <mail@tobiasvolk.de>
+ * Copyright (C) 2016       Hideman Developer <company@hideman.net>
+ * Copyright (C) 2017       Benjamin Kübler <b.kuebler@kuebler-it.de>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef F_NDP6_C
 #define F_NDP6_C
 
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
-#include "../libp2psec/map.c"
-#include "../libp2psec/util.c"
-#include "checksum.c"
-
-
-// Constants.
-#define ndp6_TABLE_SIZE 1024
-#define ndp6_ADDR_SIZE 16
-#define ndp6_MAC_SIZE 6
-#define ndp6_TIMEOUT 86400
-
-
-// Constraints.
-#if ndp6_ADDR_SIZE != 16
-#error ndp6_ADDR_SIZE != 16
-#endif
-#if ndp6_MAC_SIZE != 6
-#error ndp6_MAC_SIZE != 6
-#endif
-
-
-// NDP6 structures.
-struct s_ndp6_ndptable_entry {
-	unsigned char mac[ndp6_MAC_SIZE];
-	int portid;
-	int portts;
-	int ents;
-};
-struct s_ndp6_state {
-	struct s_map ndptable;
-};
-
+#include "ethernet.h"
+#include "p2p.h"
+#include "util.h"
+#include "map.h"
 
 // Learn MAC+PortID+PortTS of incoming IPv6 packet.
-static void ndp6PacketIn(struct s_ndp6_state *ndpstate, const unsigned char *frame, const int frame_len, const int portid, const int portts) {
+void ndp6PacketIn(struct s_ndp6_state *ndpstate, const unsigned char *frame, const int frame_len, const int portid, const int portts) {
 	struct s_ndp6_ndptable_entry mapentry;
 	const unsigned char *ipv6addr;
 	const unsigned char *macaddr;
@@ -80,7 +57,7 @@ static void ndp6PacketIn(struct s_ndp6_state *ndpstate, const unsigned char *fra
 
 
 // Generate neighbor advertisement. Returns length of generated answer.
-static int ndp6GenAdvFrame(unsigned char *outbuf, const int outbuf_len, const unsigned char *src_addr, const unsigned char *dest_addr, const unsigned char *src_mac, const unsigned char *dest_mac) {
+int ndp6GenAdvFrame(unsigned char *outbuf, const int outbuf_len, const unsigned char *src_addr, const unsigned char *dest_addr, const unsigned char *src_mac, const unsigned char *dest_mac) {
 	struct s_checksum checksum;
 	int i;
 	uint16_t u;
@@ -95,7 +72,7 @@ static int ndp6GenAdvFrame(unsigned char *outbuf, const int outbuf_len, const un
 		memcpy(&outbuf[62], src_addr, ndp6_ADDR_SIZE); // target IPv6 address
 		memcpy(&outbuf[78], "\x02\x01", 2); // ICMPv6 option header
 		memcpy(&outbuf[80], src_mac, ndp6_MAC_SIZE); // target MAC address
-		
+
 		// calculate checksum
 		checksumZero(&checksum); // reset checksum
 		for(i=0; i<32; i=i+2) checksumAdd(&checksum, *((uint16_t *)(&outbuf[22+i]))); // IPv6 pseudoheader src+dest address
@@ -113,7 +90,7 @@ static int ndp6GenAdvFrame(unsigned char *outbuf, const int outbuf_len, const un
 
 
 // Scan Ethernet frame for neighbour solicitation and generate answer neighbor advertisement. Returns length of generated answer.
-static int ndp6GenAdv(struct s_ndp6_state *ndpstate, const unsigned char *frame, const int frame_len, unsigned char *advbuf, const int advbuf_len, int *portid, int *portts) {
+int ndp6GenAdv(struct s_ndp6_state *ndpstate, const unsigned char *frame, const int frame_len, unsigned char *advbuf, const int advbuf_len, int *portid, int *portts) {
 	struct s_ndp6_ndptable_entry *mapentry;
 	const unsigned char *ipv6addr;
 	const unsigned char *macaddr;
@@ -152,7 +129,7 @@ static int ndp6GenAdv(struct s_ndp6_state *ndpstate, const unsigned char *frame,
 
 
 // Generate NDP table status report.
-static void ndp6Status(struct s_ndp6_state *ndpstate, char *report, const int report_len) {
+void ndp6Status(struct s_ndp6_state *ndpstate, char *report, const int report_len) {
 	int tnow = utilGetClock();
 	struct s_map *map = &ndpstate->ndptable;
 	struct s_ndp6_ndptable_entry *mapentry;
@@ -166,9 +143,9 @@ static void ndp6Status(struct s_ndp6_state *ndpstate, char *report, const int re
 	unsigned char infoents[4];
 	int i;
 	int j;
-	
+
 	if(maxpos > report_len) { maxpos = report_len; }
-	
+
 	memcpy(&report[pos], "IPv6                                     MAC                PortID    PortTS    LastPkt ", 88);
 	pos = pos + 88;
 	report[pos++] = '\n';
@@ -219,7 +196,7 @@ static void ndp6Status(struct s_ndp6_state *ndpstate, char *report, const int re
 
 
 // Create NDP6 structure.
-static int ndp6Create(struct s_ndp6_state *ndpstate) {
+int ndp6Create(struct s_ndp6_state *ndpstate) {
 	if(mapCreate(&ndpstate->ndptable, ndp6_TABLE_SIZE, ndp6_ADDR_SIZE, sizeof(struct s_ndp6_ndptable_entry))) {
 		mapEnableReplaceOld(&ndpstate->ndptable);
 		mapInit(&ndpstate->ndptable);
@@ -230,7 +207,7 @@ static int ndp6Create(struct s_ndp6_state *ndpstate) {
 
 
 // Destroy NDP6 structure.
-static void ndp6Destroy(struct s_ndp6_state *ndpstate) {
+void ndp6Destroy(struct s_ndp6_state *ndpstate) {
 	mapDestroy(&ndpstate->ndptable);
 }
 
