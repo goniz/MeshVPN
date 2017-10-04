@@ -30,7 +30,7 @@ void connectInitpeers(struct s_initpeers * peers) {
 	char *hostname = NULL;
 	char *port = NULL;
 	struct s_io_addrinfo new_peeraddrs;
-    
+
     int i = 0;
     for(i = 0; i < peers->count; i++) {
         debugf("connecting new peer %d", i );
@@ -76,7 +76,7 @@ void mainLoop(struct s_initpeers * peers) {
 
 	while(g_mainloop) {
 		tnow = utilGetClock();
-		
+
 		// read all fds
 		ioReadAll(&iostate);
 
@@ -92,7 +92,7 @@ void mainLoop(struct s_initpeers * peers) {
 						debug("could not write to tap device!");
 					}
 				}
-				
+
 				// output packets
 				while((sockdata_len = (p2psecOutputPacket(g_p2psec, sockdata_buf, 4096, new_peeraddr.addr))) > 0) {
 					sockdata_lastlen = sockdata_len;
@@ -115,7 +115,7 @@ void mainLoop(struct s_initpeers * peers) {
 				if((sockdata_lastlen > 0) && (msg_len > sockdata_lastlen)) {
 					msg_offset = msg_len - sockdata_lastlen;
 					if(memcmp(&msg_buf[msg_offset], sockdata_buf, sockdata_lastlen) == 0) {
-						// drop packets which have been sent out via PeerVPN's socket before to avoid loops
+						// drop packets which have been sent out via MeshVPN's socket before to avoid loops
 						debug("recursive packet filtered!");
 						msg_ok = 0;
 					}
@@ -175,7 +175,7 @@ void mainLoop(struct s_initpeers * peers) {
 								p2psecSendBroadcastMSG(g_p2psec, msg_buf, msg_len);
 							}
 						}
-					
+
 						// output packets
 						while((sockdata_len = (p2psecOutputPacket(g_p2psec, sockdata_buf, 4096, new_peeraddr.addr))) > 0) {
 							sockdata_lastlen = sockdata_len;
@@ -208,13 +208,13 @@ void mainLoop(struct s_initpeers * peers) {
 				lastconnectcount = connectcount;
 			}
 		}
-		
+
         // connect initpeers
 		if(((tnow - lastinit) > 30) && (!(mapGetKeyCount(&g_p2psec->mgt.map) > 1))) {
 			lastinit = tnow;
 			connectInitpeers(peers);
 		}
-		
+
 		// check console
 		if(g_enableconsole > 0) {
 			if(!((fd = (ioGetGroup(&iostate, IOGRP_CONSOLE))) < 0)) {
@@ -224,4 +224,3 @@ void mainLoop(struct s_initpeers * peers) {
 		}
 	}
 }
-

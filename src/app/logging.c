@@ -11,8 +11,8 @@ int logging_mode = LOGGING_NONE;
  * Initialize logger. Create connection to syslog and specify application name
  */
 static int loggerInitSyslog() {
- 	openlog("peervpn", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
-	syslog(LOG_INFO, "PeerVPN daemon started");    
+ 	openlog("meshvpn", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
+	syslog(LOG_INFO, "MeshVPN daemon started");
 
 	return 1;
 }
@@ -27,7 +27,7 @@ int loggerSetMode(int mode) {
 }
 
 void msg(char * msg) {
-    
+
 	if(logging_mode == LOGGING_NONE) {
         time_t t = time(NULL);
       	printf("[%d] %s\n", t, msg);
@@ -51,16 +51,16 @@ void debugMsg(const char * format, const char * file, const int line, ...) {
     char prepend[128];
     char msg_res[256];
     char res[384];
-    
+
     snprintf(prepend, 128, "[DEBUG] [%s:%d] ", file, line);
-    
+
     va_list ap;
     va_start(ap, line);
     int ret = vsnprintf(msg_res, 256, format, ap);
     va_end(ap);
-    
+
     strcpy(res, prepend);
     strcat(res, msg_res);
-    
+
     msg(res);
 }

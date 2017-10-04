@@ -74,7 +74,7 @@ int parseConfigLineCheckCommand(char *line, int linelen, const char *cmd, int *v
 	if(!(linelen >= cmdlen)) {
 		return 0;
 	}
-	
+
 	if(strncmp(line,cmd,cmdlen) != 0) {
 		return 0;
 	}
@@ -88,7 +88,7 @@ int parseConfigLineCheckCommand(char *line, int linelen, const char *cmd, int *v
 			if(!isWhitespaceChar(line[*vpos])) {
 				break;
 			}
-			
+
 			*vpos = (*vpos)+1;
 		}
 		return 1;
@@ -160,7 +160,7 @@ int parseConfigLine(char *line, int len, struct s_initconfig *cs) {
 		strncpy(cs->initpeers[cs->initpeerscount],&line[vpos],CONFPARSER_NAMEBUF_SIZE);
         cs->initpeerscount++;
         debug("detected new init peers");
-        
+
 		return 1;
 	}
 	else if(parseConfigLineCheckCommand(line,len,"engine",&vpos)) {
@@ -312,7 +312,7 @@ void parseConfigFile(int fd, struct s_initconfig *cs) {
 	int waiteol = 0;
 	int rc;
 	int readlen;
-    
+
     strcpy(cs->tapname,"");
     strcpy(cs->ifconfig4,"");
     strcpy(cs->ifconfig6,"");
@@ -322,11 +322,11 @@ void parseConfigFile(int fd, struct s_initconfig *cs) {
     strcpy(cs->userstr,"");
     strcpy(cs->groupstr,"");
     strcpy(cs->chrootstr,"");
-    strcpy(cs->networkname,"PEERVPN");
+    strcpy(cs->networkname,"PUBLIC_MESH");
     strcpy(cs->engines,"");
     strcpy(cs->pidfile, "");
-    strcpy(cs->privatekey, "/var/run/peervpn.pem");
-    
+    strcpy(cs->privatekey, "/var/run/meshvpn.pem");
+
     cs->password_len = 0;
     cs->enablepidfile = 0;
     cs->enableeth = 1;
@@ -346,7 +346,7 @@ void parseConfigFile(int fd, struct s_initconfig *cs) {
     cs->sockmark = 0;
     cs->enablepidfile = 0;
     cs->initpeerscount = 0;
-    
+
 	do {
 		readlen = read(fd,&c,1);
 		if(!(readlen > 0)) {
@@ -365,7 +365,7 @@ void parseConfigFile(int fd, struct s_initconfig *cs) {
 			line[linepos] = '\0';
 			rc = parseConfigLine(line,linepos,cs);
 			if(rc < 0) {
-				printf("error: config file parse error at line %d!\n", linectr); 
+				printf("error: config file parse error at line %d!\n", linectr);
 				throwError(NULL);
 			}
 			if(rc == 0) break;

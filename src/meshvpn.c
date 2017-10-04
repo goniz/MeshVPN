@@ -100,6 +100,6 @@ int main(int argc, char **argv) {
 }
 
 int show_usage() {
-	printf("Usage: peervpn <configfile>\n");
+	printf("Usage: meshvpn <configfile>\n");
 	return 2;
 }
