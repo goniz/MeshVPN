@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/Kuebler-IT/MeshVPN.svg?branch=master)](https://travis-ci.org/Kuebler-IT/MeshVPN)
+[![BCH compliance](https://bettercodehub.com/edge/badge/Kuebler-IT/MeshVPN?branch=master)](https://bettercodehub.com/)
+
 MeshVPN is a fork from PeerVPN to fix the not merged issues since a couple
 of years. Some features are planned an will be updated in future.
 
