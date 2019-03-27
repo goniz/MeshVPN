@@ -191,6 +191,43 @@ void nodedbDestroy(struct s_nodedb *db) {
 	free(db->addrdb);
 }
 
+int nodedbNodeAddrExists(struct s_nodedb* db, struct s_peeraddr* addr)
+{
+	int size = mapGetKeyCount(db->addrdb);
+//	msgf("addrdb count: %d\n", size);
+
+	for (int i = 0; i < size; i++) {
+		if (!mapIsValidID(db->addrdb, i)) {
+			continue;
+		}
+
+		struct s_map* addrset = mapGetValueByID(db->addrdb, i);
+		for (int j = 0; j < db->num_peeraddrs; j++) {
+			if (!mapIsValidID(addrset, j)) {
+				continue;
+			}
+
+			struct s_peeraddr* peeraddr = mapGetKeyByID(addrset, j);
+			if (NULL == peeraddr) {
+				continue;
+			}
+
+//			char expectedHex[256];
+//            char currHex[256];
+//
+//            utilByteArrayToHexstring(expectedHex, sizeof(expectedHex), addr->addr, peeraddr_SIZE);
+//            utilByteArrayToHexstring(currHex, sizeof(currHex), peeraddr->addr, peeraddr_SIZE);
+//			msgf("expected %s curr %s\n", expectedHex, currHex);
+
+			if (0 == memcmp(addr->addr,peeraddr->addr, peeraddr_SIZE)) {
+				return 1;
+			}
+		}
+	}
+
+	return 0;
+}
+
 
 // Generate NodeDB status report.
 void nodedbStatus(struct s_nodedb *db, char *report, const int report_len) {

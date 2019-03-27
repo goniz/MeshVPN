@@ -109,19 +109,13 @@ int main(int argc, char **argv) {
 
 int show_usage(void) {
         const char title[] =
-                PACKAGE_STRING " " TARGET_ALIAS
+                "MeshVPN "
 #ifdef HAVE_LIBSECCOMP
                 " [SECCOMP]"
 #endif
-#ifdef HAVE_LIBCRYPTO
                 " [CRYPTO]"
-#endif
-#ifdef HAVE_LIBSSL
                 " [SSL]"
-#endif
-#ifdef HAVE_LIBZ
                 " [ZLIB]"
-#endif
                 " built on " __DATE__
         ;
 

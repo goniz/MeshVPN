@@ -39,6 +39,9 @@
 extern struct s_p2psec * g_p2psec;
 
 
+void initTapDevice(const struct s_initconfig* initconfig, char* tapname);
+void initAttachToInterface(char* interface);
+
 // handle termination signals
 void sighandler(int sig) {
 	g_mainloop = 0;
@@ -202,43 +205,12 @@ void init(struct s_initconfig *initconfig) {
 
     // open tap device
     if(initconfig->enableeth) {
-        msg("Trying to open TAP device");
-        if((j = (ioOpenTAP(&iostate, tapname, initconfig->tapname))) < 0) {
-            g_enableeth = 0;
-            printf("   failed.\n");
-            throwError("The TAP device could not be opened! This might be caused by:\n- a missing TAP device driver,\n- a blocked TAP device (try a different name),\n- insufficient privileges (try running as the root/administrator user).");
-        } else {
-            ioSetGroup(&iostate, j, IOGRP_TAP);
-            g_enableeth = 1;
-            msgf("TAP device successfully opened: %s", tapname);
-
-            if(strlen(initconfig->ifconfig4) > 0) {
-                // configure IPv4 address
-                if(!(ifconfig4(tapname, strlen(tapname), initconfig->ifconfig4, strlen(initconfig->ifconfig4)))) {
-                    debug("Could not automatically configure IPv4 address!");
-                }
-            }
-
-            if(strlen(initconfig->ifconfig6) > 0) {
-                // configure IPv6 address
-                if(!(ifconfig6(tapname, strlen(tapname), initconfig->ifconfig6, strlen(initconfig->ifconfig6)))) {
-                    debug("Could not automatically configure IPv6 address!");
-                }
-            }
-
-            if(strlen(initconfig->upcmd) > 0) {
-                msgf("running upcmd: %s", initconfig->upcmd);
-
-                // execute shell command
-                if((ifconfigExec(initconfig->upcmd)) < 0) {
-                    msg("The command specified in the \"upcmd\" option returned an error!");
-                } else {
-                    msgf("command %s executed successfully", initconfig->upcmd);
-                }
-            }
-        }
-        msg("Address configuration completed");
-    }
+    	if (initconfig->enablerawsockets) {
+			initAttachToInterface(initconfig->tapname);
+    	} else {
+			initTapDevice(initconfig, tapname);
+		}
+	}
     else {
         g_enableeth = 0;
     }
@@ -370,4 +342,65 @@ void init(struct s_initconfig *initconfig) {
 
 	// exit
 	printf("exit.\n");
+}
+
+void initAttachToInterface(char* interface)
+{
+	msgf("Trying to attach to an existing interface: %s", interface);
+
+	int id = ioAttachToInterface(&iostate, interface);
+	if (0 > id) {
+		g_enableeth = 0;
+		printf("   failed.\n");
+		throwError("Could not attach to the network interface specified.");
+	}
+
+	ioSetGroup(&iostate, id, IOGRP_TAP);
+	g_enableeth = 1;
+	msgf("Interface successfully attached: %s", interface);
+}
+
+void initTapDevice(const struct s_initconfig* initconfig, char* tapname) {
+	msg("Trying to open TAP device");
+
+	int id = 0;
+	if ((id = (ioOpenTAP(&iostate, tapname, initconfig->tapname))) < 0) {
+		g_enableeth = 0;
+		printf("   failed.\n");
+		throwError("The TAP device could not be opened! This might be caused by:\n"
+	               "- a missing TAP device driver,\n"
+				   "- a blocked TAP device (try a different name),\n"
+	               "- insufficient privileges (try running as the root/administrator user).");
+	} else {
+		ioSetGroup(&iostate, id, IOGRP_TAP);
+		g_enableeth = 1;
+		msgf("TAP device successfully opened: %s", tapname);
+
+		if (strlen(initconfig->ifconfig4) > 0) {
+			// configure IPv4 address
+			if (!(ifconfig4(tapname, strlen(tapname), initconfig->ifconfig4, strlen(initconfig->ifconfig4)))) {
+				debug("Could not automatically configure IPv4 address!");
+			}
+		}
+
+		if (strlen(initconfig->ifconfig6) > 0) {
+			// configure IPv6 address
+			if (!(ifconfig6(tapname, strlen(tapname), initconfig->ifconfig6, strlen(initconfig->ifconfig6)))) {
+				debug("Could not automatically configure IPv6 address!");
+			}
+		}
+
+		if (strlen(initconfig->upcmd) > 0) {
+			msgf("running upcmd: %s", initconfig->upcmd);
+
+			// execute shell command
+			if ((ifconfigExec(initconfig->upcmd)) < 0) {
+				msg("The command specified in the \"upcmd\" option returned an error!");
+			} else {
+				msgf("command %s executed successfully", initconfig->upcmd);
+			}
+		}
+	}
+
+	msg("Address configuration completed");
 }

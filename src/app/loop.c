@@ -19,6 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdbool.h>
+#include <netinet/ip.h>
+#include <netinet/udp.h>
 #include "logging.h"
 #include "globals.h"
 #include "io.h"
@@ -28,6 +31,8 @@
 #include "platform.h"
 
 extern struct s_p2psec *g_p2psec;
+
+static int isEtherMeshVPNFrame(unsigned char* msg_buf, int msg_len);
 
 // Connect initpeers.
 void connectInitpeers(struct s_initpeers * peers) {
@@ -120,9 +125,14 @@ void mainLoop(struct s_initpeers * peers) {
 					msg_offset = msg_len - sockdata_lastlen;
 					if(memcmp(&msg_buf[msg_offset], sockdata_buf, sockdata_lastlen) == 0) {
 						// drop packets which have been sent out via MeshVPN's socket before to avoid loops
-						debug("recursive packet filtered!");
+						msgf("recursive packet filtered!\n");
 						msg_ok = 0;
 					}
+				}
+
+				if (isEtherMeshVPNFrame(msg_buf, msg_len)) {
+                    msgf("meshvpn packet found in TAP, filtering.\n");
+					msg_ok = 0;
 				}
 
 				// process frame
@@ -227,4 +237,37 @@ void mainLoop(struct s_initpeers * peers) {
 			}
 		}
 	}
+}
+
+static int isEtherMeshVPNFrame(unsigned char* msg_buf, int msg_len) {
+    const struct ethhdr* ether = (struct ethhdr*)msg_buf;
+    if (ether->h_proto != htons(ETH_P_IP)) {
+        return 0;
+    }
+
+    const struct ip* ip = (struct ip*)(ether+1);
+    if (ip->ip_p != IPPROTO_UDP) {
+        return 0;
+    }
+
+    const struct udphdr* udp = (struct udphdr*)(((char*)ip) + ip->ip_hl*4);
+
+//    msgf("src %s:%d dst %s:%d\n",
+//        strdup(inet_ntoa(ip->ip_src)),
+//        ntohs(udp->uh_sport),
+//        strdup(inet_ntoa(ip->ip_dst)),
+//         ntohs(udp->uh_dport)
+//    );
+
+    struct s_peeraddr peeraddr;
+    memset(&peeraddr.addr, 0, sizeof(peeraddr));
+    memcpy(&peeraddr.addr[0], IO_ADDRTYPE_UDP4, 4); // set address type
+    memcpy(&peeraddr.addr[4], &ip->ip_dst, 4); // copy source IPv4 address
+    memcpy(&peeraddr.addr[8], &udp->uh_dport, 2); // copy source port
+
+    if (nodedbNodeAddrExists(&g_p2psec->mgt.nodedb, &peeraddr)) {
+		return 1;
+    }
+
+    return 0;
 }

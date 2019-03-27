@@ -175,6 +175,15 @@ int parseConfigLine(char *line, int len, struct s_initconfig *cs) {
 		cs->password_len = strlen(cs->password);
 		return 1;
 	}
+	else if(parseConfigLineCheckCommand(line,len,"enablerawsockets",&vpos)) {
+		if((a = parseConfigBoolean(&line[vpos])) < 0) {
+			return -1;
+		}
+		else {
+			cs->enablerawsockets = a;
+			return 1;
+		}
+	}
 	else if(parseConfigLineCheckCommand(line,len,"enableconsole",&vpos)) {
 		if((a = parseConfigBoolean(&line[vpos])) < 0) {
 			return -1;

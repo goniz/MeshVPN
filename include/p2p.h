@@ -315,6 +315,8 @@ void nodedbDestroy(struct s_nodedb *db);
 // Generate NodeDB status report.
 void nodedbStatus(struct s_nodedb *db, char *report, const int report_len);
 
+int nodedbNodeAddrExists(struct s_nodedb* db, struct s_peeraddr* addr);
+
 // size of packet header fields in bytes
 #define packet_PEERID_SIZE 4 // peer ID
 #define packet_HMAC_SIZE 32 // hmac that includes sequence number, node ID, pl* fields (pllen, pltype, plopt) and payload
@@ -383,6 +385,8 @@ struct s_packet_data {
 
 // return the peer ID
 int packetGetPeerID(const unsigned char *pbuf);
+
+int packetVerifyPacket(const unsigned char* pbuf, const int pbuf_size, struct s_crypto* ctx);
 
 // encode packet
 int packetEncode(unsigned char *pbuf, const int pbuf_size, const struct s_packet_data *data, struct s_crypto *ctx);

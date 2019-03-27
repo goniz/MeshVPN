@@ -71,6 +71,7 @@ struct s_initconfig {
         int daemonize;
         int enableconsole;
         int sockmark;
+        int enablerawsockets;
 };
 
 // handle termination signals

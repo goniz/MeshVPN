@@ -64,6 +64,23 @@ int packetEncode(unsigned char *pbuf, const int pbuf_size, const struct s_packet
 	return (packet_PEERID_SIZE + len);
 }
 
+int packetVerifyPacket(const unsigned char* pbuf, const int pbuf_size, struct s_crypto* ctx)
+{
+	unsigned char dec_buf[pbuf_size];
+
+	// decrypt packet
+	if(pbuf_size < (packet_PEERID_SIZE + packet_HMAC_SIZE + packet_IV_SIZE)) {
+		return -1;
+	}
+
+	int len = cryptoDec(ctx, dec_buf, pbuf_size, &pbuf[packet_PEERID_SIZE], (pbuf_size - packet_PEERID_SIZE), packet_HMAC_SIZE, packet_IV_SIZE);
+	if (len < packet_CRHDR_SIZE) {
+		return -1;
+	}
+
+	// get packet data
+	return packetGetPeerID(pbuf);
+}
 
 // decode packet
 int packetDecode(struct s_packet_data *data, const unsigned char *pbuf, const int pbuf_size, struct s_crypto *ctx, struct s_seq_state *seqstate) {

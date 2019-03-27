@@ -29,6 +29,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netpacket/packet.h>
 #include "logging.h"
 
 
@@ -43,6 +45,8 @@
 
 #if defined(IO_LINUX)
 #include <linux/if_tun.h>
+#include <stdio.h>
+
 #endif
 
 #if defined(IO_WINDOWS)
@@ -670,6 +674,91 @@ int ioOpenTAP(struct s_io_state *iostate, char *tapname, const char *reqname) {
 	return id;
 }
 
+static int ioBindToInterface(int fd, const char* device , int protocol) {
+	struct sockaddr_ll sll;
+	struct ifreq ifr;
+
+	bzero(&sll , sizeof(sll));
+	bzero(&ifr , sizeof(ifr));
+
+	strncpy(ifr.ifr_name, device, IFNAMSIZ);
+
+	//copy device name to ifr
+	if (-1 == ioctl(fd, SIOCGIFINDEX, &ifr))
+	{
+		perror("Unable to find interface index");
+		return -1;
+	}
+
+	sll.sll_family = AF_PACKET;
+	sll.sll_ifindex = ifr.ifr_ifindex;
+	sll.sll_protocol = htons(protocol);
+	if (-1 == bind(fd, (struct sockaddr *)&sll , sizeof(sll)))
+	{
+		perror("bind");
+		return -1;
+	}
+
+	return 0;
+}
+
+static int ioSetPromiscMode(int sock, const char* interface)
+{
+    struct ifreq ifr;
+    bzero(&ifr, sizeof(ifr));
+
+    strncpy(ifr.ifr_name, interface, IFNAMSIZ);
+
+    //copy device name to ifr
+    if (-1 == ioctl(sock, SIOCGIFINDEX, &ifr))
+    {
+        perror("Unable to find interface index");
+        return -1;
+    }
+
+    struct packet_mreq mreq;
+    bzero(&mreq, sizeof(mreq));
+    mreq.mr_ifindex = ifr.ifr_ifindex;
+    mreq.mr_type = PACKET_MR_PROMISC;
+
+    if (-1 == setsockopt(sock, SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mreq, sizeof(mreq))) {
+        perror("promisc setsockopt failed");
+        return -1;
+    }
+
+    return 0;
+}
+
+int ioAttachToInterface(struct s_io_state* iostate, const char* interface)
+{
+	int id = -1;
+
+	int rawsocket = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+	if (-1 == rawsocket) {
+		return -1;
+	}
+
+	if (-1 == ioBindToInterface(rawsocket, interface, ETH_P_ALL)) {
+		close(rawsocket);
+		return -1;
+	}
+
+	if (-1 == ioSetPromiscMode(rawsocket, interface)) {
+	    close(rawsocket);
+        return -1;
+	}
+
+	if((id = ioAllocID(iostate)) < 0) {
+		close(rawsocket);
+		return -1;
+	}
+
+	iostate->handle[id].open = 1;
+
+	iostate->handle[id].fd = rawsocket;
+	iostate->handle[id].type = IO_TYPE_FILE;
+	return id;
+}
 
 // Opens STDIN. Returns handle ID if succesful, or -1 on error.
  int ioOpenSTDIN(struct s_io_state *iostate) {
@@ -677,7 +766,7 @@ int ioOpenTAP(struct s_io_state *iostate, char *tapname, const char *reqname) {
 
 #if defined(IO_LINUX) || defined(IO_BSD)
 
-	if((fcntl(STDIN_FILENO,F_SETFL,O_NONBLOCK)) < 0) {
+	if((fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK)) < 0) {
 		return -1;
 	}
 

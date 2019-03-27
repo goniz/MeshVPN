@@ -177,6 +177,8 @@ HANDLE ioOpenTAPWINHandle(char *tapname, const char *reqname, const int reqname_
 // Opens a TAP device. Returns handle ID if succesful, or -1 on error.
 int ioOpenTAP(struct s_io_state *iostate, char *tapname, const char *reqname);
 
+int ioAttachToInterface(struct s_io_state* iostate, const char* interface);
+
 // Opens STDIN. Returns handle ID if succesful, or -1 on error.
 int ioOpenSTDIN(struct s_io_state *iostate);
 
